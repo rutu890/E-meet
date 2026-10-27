@@ -323,26 +323,17 @@
 .auth-page .auth-teal-orb {
 
 
-
-    position: absolute;
-
-    z-index: 0;
-
-    bottom: -430px;
-
-    left: -253px;
-
+position: absolute;
+    z-index: 1;
+    bottom: -407px;
+    left: -268px;
     width: 539px;
-
-    height: 558px;
-
+    height: 622px;
     border: 1px solid #10b8ac;
-
     border-style: dotted;
-
-    border-radius: 95%;
-
+    border-radius: 102%;
     pointer-events: none;
+
 
 }
 
@@ -408,7 +399,7 @@
 
   margin: 0 auto;
 
-  padding: 40px 44px 34px;
+  padding: 18px 22px 1px;
 
   border: 1px solid rgb(255 255 255 / 85%);
 
