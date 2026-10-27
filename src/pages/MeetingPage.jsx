@@ -1,0 +1,6 @@
+import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useMemo } from "react";
+import { useApp } from "../context/AppContext";
+import { meetingService } from "../services/meetingService";
+import MockMeetingRoom from "../features/meeting/MockMeetingRoom";
+export default function MeetingPage(){const {meetingId}=useParams(),loc=useLocation(),nav=useNavigate(),{user}=useApp();const participants=useMemo(()=>meetingService.getParticipants(user),[user]);return <MockMeetingRoom meetingId={decodeURIComponent(meetingId||"")} title={loc.state?.title||"Team meeting"} isHost={loc.state?.isHost!==false} initialParticipants={participants} onLeave={()=>nav("/")}/>;}

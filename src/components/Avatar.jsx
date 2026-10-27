@@ -1,0 +1,1 @@
+export default function Avatar({ initials="MS", color="lavender", size="md" }) { return <span className={`avatar avatar-${color} avatar-${size}`}>{initials}</span>; }

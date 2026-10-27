@@ -1,0 +1,2 @@
+import { MicOff, UserCheck, ShieldCheck } from "lucide-react";
+export default function HostToolbar({onMuteAll,onWaiting}){return <div className="host-tools"><b><ShieldCheck size={15}/> Host controls</b><button onClick={onMuteAll}><MicOff size={15}/> Mute everyone</button><button onClick={onWaiting}><UserCheck size={15}/> Manage waiting room</button><small>Actions are demo-only.</small></div>}
