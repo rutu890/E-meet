@@ -17,6 +17,14 @@ const DEMO_PEOPLE = [
   { id: "rk", name: "Roshan Kumar", initials: "RK", color: "orange", role: "Participant", muted: true, cameraOn: false },
 ];
 
+function normalizeColor(color, index = 0) {
+  // Only these two theme classes have matching tile backgrounds in the CSS.
+  if (color === "orange" || color === "teal") return color;
+  if (["peach", "rose", "red", "coral"].includes(String(color).toLowerCase())) return "orange";
+  if (["mint", "green", "blue", "purple", "primary"].includes(String(color).toLowerCase())) return "teal";
+  return index % 2 === 0 ? "orange" : "teal";
+}
+
 function getInitials(name = "User") {
   return name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "U";
 }
@@ -71,7 +79,7 @@ export default function MockMeetingRoom({
       id: p.id || `person-${i}`,
       name: p.name || p.fullName || `Participant ${i + 1}`,
       initials: p.initials || getInitials(p.name || p.fullName),
-      color: p.color || (i % 2 ? "teal" : "orange"),
+      color: normalizeColor(p.color, i),
       role: p.role || (p.isHost ? "Host" : "Participant"),
       isYou: Boolean(p.isYou || p.isCurrentUser),
       muted: Boolean(p.muted),
@@ -100,6 +108,7 @@ export default function MockMeetingRoom({
   const [elapsed, setElapsed] = useState(0);
   const [search, setSearch] = useState("");
   const [toast, setToast] = useState(initialNotice);
+  const [isLoading, setIsLoading] = useState(true);
   const [leaveOpen, setLeaveOpen] = useState(false);
   const [hostToolsOpen, setHostToolsOpen] = useState(false);
   const [reactionOpen, setReactionOpen] = useState(false);
@@ -117,6 +126,12 @@ export default function MockMeetingRoom({
     playUiTone(tone);
     if (toastTimer.current) window.clearTimeout(toastTimer.current);
     toastTimer.current = window.setTimeout(() => setToast(""), 2500);
+  }, []);
+
+  useEffect(() => {
+    // Brief skeleton keeps the initial meeting layout from flashing while it mounts.
+    const loadingTimer = window.setTimeout(() => setIsLoading(false), 320);
+    return () => window.clearTimeout(loadingTimer);
   }, []);
 
   useEffect(() => {
@@ -269,9 +284,16 @@ export default function MockMeetingRoom({
       <main className={`mr-workspace ${sidebar ? "with-sidebar" : ""} ${view === "speaker" ? "speaker-view" : ""} ${view === "sidebar" ? "filmstrip-view" : ""}`}>
         <section className="mr-stage">
           <div className={`mr-grid ${view === "speaker" ? "mr-speaker-grid" : ""} ${view === "sidebar" ? "mr-filmstrip-grid" : ""}`}>
-            {(view === "speaker" ? [...people].sort((a, b) => Number(b.isYou) - Number(a.isYou)) : people).map((person, index) => (
-              <AvatarTile key={person.id} person={{ ...person, muted: person.isYou ? muted : person.muted, cameraOn: person.isYou ? cameraOn : person.cameraOn, handRaised: person.isYou ? handRaised : person.handRaised }} active={index === 1} onClick={() => { setView("speaker"); notify(`${person.name} is in speaker focus`); }} />
-            ))}
+            {isLoading
+              ? Array.from({ length: Math.min(Math.max(people.length, 4), 6) }, (_, index) => (
+                  <div className="mr-tile-skeleton" key={`skeleton-${index}`} aria-hidden="true">
+                    <span className="mr-skeleton-avatar" />
+                    <span className="mr-skeleton-label" />
+                  </div>
+                ))
+              : (view === "speaker" ? [...people].sort((a, b) => Number(b.isYou) - Number(a.isYou)) : people).map((person, index) => (
+                  <AvatarTile key={person.id} person={{ ...person, muted: person.isYou ? muted : person.muted, cameraOn: person.isYou ? cameraOn : person.cameraOn, handRaised: person.isYou ? handRaised : person.handRaised }} active={index === 1} onClick={() => { setView("speaker"); notify(`${person.name} is in speaker focus`); }} />
+                ))}
           </div>
           {reaction && <div className="mr-floating-reaction" role="status">{reaction}</div>}
           {shareStream && <div className="mr-share-indicator"><MonitorUp size={15}/> Screen sharing is active in this browser</div>}
