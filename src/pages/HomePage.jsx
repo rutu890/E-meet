@@ -1,7 +1,6 @@
 import { memo, useDeferredValue, useMemo, useState } from "react";
 import { CalendarClock, CalendarDays, Check, ChevronLeft, ChevronRight, Link2, Loader2, Plus, ShieldCheck, Video, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import Avatar from "../components/Avatar";
 import DashboardLayout from "../components/DashboardLayout";
 import Toast from "../components/Toast";
 import { HomeSkeleton } from "../components/Skeletons";
@@ -15,9 +14,9 @@ import { useEscape } from "../hooks/useEscape";
 import { playTone } from "../utils/feedback";
 
 const fallbackMeetings = [
-  { id: "project-discussion", title: "Project Discussion", date: "Today · Dev team", time: "10:00 AM", duration: "30 min", status: "Live now", participants: 4 },
-  { id: "project-review", title: "Project Review", date: "Today · Design team", time: "2:00 PM", duration: "45 min", status: "Upcoming", participants: 6 },
-  { id: "interns-session", title: "Interns Session", date: "Today · Design & Dev", time: "4:30 PM", duration: "1 hr", status: "Upcoming", participants: 8 },
+  { id: "project-discussion", title: "Project Discussion", date: "Today · Dev team", time: "10:00 AM", duration: "30 min", status: "Live now", participants: 7 },
+  { id: "project-review", title: "Project Review", date: "Today · Design team", time: "2:00 PM", duration: "45 min", status: "Upcoming", participants: 9 },
+  { id: "interns-session", title: "Interns Session", date: "Today · Design & Dev", time: "4:30 PM", duration: "1 hr", status: "Upcoming", participants: 5 },
   { id: "standup", title: "Standup", date: "Tomorrow · Dev team", time: "9:30 AM", duration: "15 min", status: "Upcoming", participants: 5 },
   { id: "frontend-planning", title: "Frontend Planning", date: "Fri, 23 Oct · Dev Team", time: "11:00 AM", duration: "1 hr 30 min", status: "Ended", participants: 8 },
 ];
@@ -29,6 +28,23 @@ const TODAY_STATIC = [
 const STATIC_MARKED_DAYS = [6, 9, 14, 23, 26, 27];
 const DURATIONS = [15, 30, 45, 60, 90];
 const COLORS = ["orange", "teal", "purple"];
+const PARTICIPANT_PRESETS = [
+  [
+    { initials: "SN", color: "teal" },
+    { initials: "SB", color: "orange" },
+    { initials: "DS", color: "blue" },
+  ],
+  [
+    { initials: "DS", color: "blue" },
+    { initials: "SN", color: "teal" },
+    { initials: "SB", color: "orange" },
+  ],
+  [
+    { initials: "SB", color: "orange" },
+    { initials: "RK", color: "purple" },
+    { initials: "SN", color: "teal" },
+  ],
+];
 
 const pad = (n) => String(n).padStart(2, "0");
 const keyOf = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -39,13 +55,20 @@ const isEnded = (s) => s === "Ended" || s === "Completed";
 const CallRow = memo(function CallRow({ meeting, index, onOpen }) {
   const tone = COLORS[index % 3];
   const ended = isEnded(meeting.status);
+  const avatars = PARTICIPANT_PRESETS[index % PARTICIPANT_PRESETS.length];
+  const extra = Math.max(1, (meeting.participants || 4) - avatars.length);
+
   return (
     <article className="em-call-row" style={{ "--i": index }}>
       <span className={`em-call-icon ${tone}`}><Video size={17} /></span>
       <div className="em-call-details"><b>{meeting.title}</b><small>{meeting.date}</small></div>
-      <div className="em-participant-stack">
-        <Avatar initials="SN" color="mint" size="xs" /><Avatar initials="SB" color="peach" size="xs" /><Avatar initials="DS" color="blue" size="xs" />
-        <span>+{Math.max(1, (meeting.participants || 4) - 3)}</span>
+      <div className="em-participant-stack" aria-label="Meeting participants">
+        {avatars.map((p, i) => (
+          <span key={i} className={`em-participant-avatar em-avatar-${p.color}`} title={p.initials}>
+            {p.initials}
+          </span>
+        ))}
+        <span className="em-participant-count">+{extra}</span>
       </div>
       <div className="em-call-time"><b>{meeting.time}</b><small>{meeting.duration || "30 min"}</small></div>
       <span className={`em-status ${meeting.status === "Live now" ? "live" : ended ? "ended" : ""}`}>{meeting.status || "Upcoming"}</span>

@@ -37,6 +37,7 @@ export default function ProfilePage() {
               <div><span>Email address</span><b>{profile.email || "Not provided"}</b></div>
               <div><span>Role / job title</span><b>{profile.role || "User"}</b></div>
               <div><span>Time zone</span><b>{profile.timezone === "Asia/Kolkata" ? "India Standard Time (IST)" : profile.timezone || "Not set"}</b></div>
+              <div><span>Interface language</span><b>{profile.language || "English (United States)"}</b></div>
               {profile.bio && <div className="wide"><span>About</span><b>{profile.bio}</b></div>}
             </div>
           </section>

@@ -189,7 +189,9 @@ export default function DashboardLayout({ children, page = "home", searchPlaceho
                   <div className="em-profile-popover-title"><b>Personal</b><button className="em-text-action" onClick={signOut}>Sign out</button></div>
                   <div className="em-profile-popover-head">
                     <AvatarContent profile={profile} initials={initials} large />
-                    <div className="em-profile-identity"><b>{fullName}</b><small>{profile.email || "Add your email address"}</small><span className="em-account-link-static">My Euodoo account <ExternalLink size={12} /></span></div>
+                    <div className="em-profile-identity"><b>{fullName}</b><small>{profile.email || "Add your email address"}</small>
+                    {/* <span className="em-account-link-static">My Euodoo account <ExternalLink size={12} /></span> */}
+                    </div>
                   </div>
                   <div className="em-status-area">
                     <button className={`em-status-current status-${selectedStatus.color}`} onClick={() => setStatusOpen((v) => !v)} aria-expanded={statusOpen}>
@@ -211,7 +213,6 @@ export default function DashboardLayout({ children, page = "home", searchPlaceho
                     <button onClick={() => { setProfileOpen(false); setStatusOpen(false); navigate("/profile"); }}><UserRound size={16} /><span>View profile</span><ChevronRight className="shortcut-arrow" size={15} /></button>
                     <NavLink to="/settings" onClick={() => { setProfileOpen(false); setStatusOpen(false); }}><SettingsIcon size={16} /><span>Personal settings</span><ChevronRight className="shortcut-arrow" size={15} /></NavLink>
                   </div>
-                  <button className="em-signout" onClick={signOut}><LogOut size={16} /> Sign out</button>
                 </div>
               )}
             </div>

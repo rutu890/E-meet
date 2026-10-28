@@ -18,6 +18,13 @@ const settingTabs = [
   { id: "privacy", label: "Privacy", icon: ShieldCheck },
 ];
 const TIMEZONES = [["Asia/Kolkata", "India Standard Time (IST)"], ["Europe/London", "London"], ["America/New_York", "Eastern Time"], ["UTC", "UTC"]];
+const LANGUAGES = [
+  "English (United States)",
+  "Español",
+  "Français",
+  "Deutsch",
+  "हिन्दी (Hindi)",
+];
 const PREF_KEY = "em-preferences";
 const DEFAULT_PREFS = { meetingReminders: true, emailUpdates: false, joinSounds: true, cameraOnJoin: false, micOnJoin: false, showPresence: true, allowGuestJoin: true };
 
@@ -33,7 +40,7 @@ export default function SettingsPage() {
   const fileRef = useRef(null);
 
   const [activeTab, setActiveTab] = useState(location.state?.activeTab || "profile");
-  const [profile, setProfile] = useState(() => ({ name: "", email: "", role: "", timezone: "Asia/Kolkata", bio: "", photo: "", ...getProfile(user) }));
+  const [profile, setProfile] = useState(() => ({ name: "", email: "", role: "", timezone: "Asia/Kolkata", language: "English (United States)", bio: "", photo: "", ...getProfile(user) }));
   const [prefs, setPrefs] = useState(loadPrefs);
   const [sounds, setSounds] = useState(isSoundOn);
   const [dirty, setDirty] = useState(false);
@@ -82,7 +89,7 @@ export default function SettingsPage() {
     setSaving(true);
     try {
       await new Promise((r) => setTimeout(r, 400)); // simulates the API call; remove when the backend is connected
-      persist({ name: profile.name.trim(), email: profile.email.trim(), role: profile.role.trim(), timezone: profile.timezone, bio: profile.bio.trim() });
+      persist({ name: profile.name.trim(), email: profile.email.trim(), role: profile.role.trim(), timezone: profile.timezone, language: profile.language || "English (United States)", bio: profile.bio.trim() });
       localStorage.setItem(PREF_KEY, JSON.stringify(prefs));
       setDirty(false);
       show("Settings saved");
@@ -118,32 +125,106 @@ export default function SettingsPage() {
             {activeTab === "profile" && (
               <>
                 <section className="em-settings-card">
-                  <div className="em-settings-card-head"><span className="em-settings-icon purple"><UserRound size={19} /></span><div><h2>Personal profile</h2><p>Update the details associated with your account.</p></div></div>
+                  <div className="em-personal-profile-head">
+                    <h2>Personal Profile</h2>
+                    <p>Your public details visible to teammates and participants in meetings.</p>
+                  </div>
 
-                  <div className="em-profile-edit">
-                    <button type="button" className={`em-avatar-upload ${dragging ? "is-drag" : ""} ${photoBusy ? "is-busy" : ""}`} onClick={() => fileRef.current?.click()} disabled={photoBusy} aria-label="Upload profile photo" {...dropHandlers}>
-                      {profile.photo ? <img src={profile.photo} alt="Your profile" /> : <span className="em-avatar profile-xl">{initials}</span>}
-                      <span className="em-avatar-overlay">{photoBusy ? <Loader2 size={20} className="em-spin" /> : <Camera size={20} />}</span>
-                    </button>
-                    <div className="em-photo-copy">
-                      <b>Profile photo</b>
-                      <small>PNG, JPG or WebP up to 5 MB. Drop an image on your photo or choose a file. We crop it to a square.</small>
-                      <div className="em-photo-actions">
-                        <button type="button" className="em-button-secondary sm" onClick={() => fileRef.current?.click()} disabled={photoBusy}><Upload size={14} /> {profile.photo ? "Change photo" : "Upload photo"}</button>
-                        {profile.photo && <button type="button" className="em-remove-photo" onClick={removePhoto}><Trash2 size={13} /> Remove</button>}
+                  <div className="em-profile-picture-row" {...dropHandlers}>
+                    <div className="em-profile-picture-left">
+                      <div className="em-avatar em-picture-avatar">
+                        {profile.photo ? (
+                          <img src={profile.photo} alt="Profile" decoding="async" />
+                        ) : (
+                          initials
+                        )}
+                      </div>
+                      <div className="em-picture-meta">
+                        <b>Profile Picture</b>
+                        <small>PNG, JPG or WebP up to 5MB. Circular cropped.</small>
                       </div>
                     </div>
-                    <input ref={fileRef} type="file" hidden accept="image/png,image/jpeg,image/webp" onChange={(e) => handleFile(e.target.files?.[0])} />
+
+                    <div className="em-picture-actions">
+                      <button
+                        type="button"
+                        className="em-change-photo-btn"
+                        onClick={() => fileRef.current?.click()}
+                        disabled={photoBusy}
+                      >
+                        {photoBusy ? (
+                          <>
+                            <Loader2 size={13} className="em-spin" /> Uploading…
+                          </>
+                        ) : (
+                          "Change Photo"
+                        )}
+                      </button>
+                      {profile.photo && (
+                        <button
+                          type="button"
+                          className="em-remove-photo-link"
+                          onClick={removePhoto}
+                          title="Remove photo"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      )}
+                    </div>
+                    <input
+                      ref={fileRef}
+                      type="file"
+                      hidden
+                      accept="image/png,image/jpeg,image/webp"
+                      onChange={(e) => handleFile(e.target.files?.[0])}
+                    />
                   </div>
 
                   <div className="em-settings-fields">
-                    <label>Full name<input value={profile.name} onChange={setField("name")} required /></label>
-                    <label>Email address<input type="email" value={profile.email} onChange={setField("email")} required /></label>
-                    <label>Role / job title<input value={profile.role} onChange={setField("role")} placeholder="e.g. Full Stack Developer" /></label>
-                    <label>Time zone
-                      <select value={profile.timezone} onChange={setField("timezone")}>{TIMEZONES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
+                    <label>
+                      Full name
+                      <input value={profile.name} onChange={setField("name")} required />
                     </label>
-                    <label className="em-bio-field">About<textarea value={profile.bio} onChange={setField("bio")} maxLength={200} placeholder="A short line about you" /></label>
+                    <label>
+                      Email address
+                      <input type="email" value={profile.email} onChange={setField("email")} required />
+                    </label>
+                    <label className="wide">
+                      Role / job title
+                      <input value={profile.role} onChange={setField("role")} placeholder="e.g. Full Stack Developer" />
+                    </label>
+                    <label>
+                      Time zone
+                      <select value={profile.timezone} onChange={setField("timezone")}>
+                        {TIMEZONES.map(([v, l]) => (
+                          <option key={v} value={v}>
+                            {l}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      Interface Language
+                      <select
+                        value={profile.language || "English (United States)"}
+                        onChange={setField("language")}
+                      >
+                        {LANGUAGES.map((lang) => (
+                          <option key={lang} value={lang}>
+                            {lang}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="em-bio-field wide">
+                      About
+                      <textarea
+                        value={profile.bio}
+                        onChange={setField("bio")}
+                        maxLength={200}
+                        placeholder="A short line about you"
+                      />
+                    </label>
                   </div>
                 </section>
 
@@ -193,10 +274,10 @@ export default function SettingsPage() {
               </section>
             )}
 
-            <div className="em-settings-bottom">
+            {/* <div className="em-settings-bottom">
               <span>{dirty ? "You have unsaved changes." : "Changes are saved locally for this demo."}</span>
               <button className="em-button-primary" type="submit" disabled={saving}>{saving ? <Loader2 size={16} className="em-spin" /> : <Save size={16} />} Save changes</button>
-            </div>
+            </div> */}
           </form>
         </>
       )}
