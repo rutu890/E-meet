@@ -4,11 +4,6 @@ import { useApp } from "../context/AppContext";
 import { meetingService } from "../services/meetingService";
 import MockMeetingRoom from "../features/meeting/MockMeetingRoom";
 
-/**
- * Meeting route adapter.
- * Reads the meeting title/host status from router state and passes a small
- * success toast to the room when the homepage just created or joined a meeting.
- */
 export default function MeetingPage() {
   const { meetingId = "" } = useParams();
   const location = useLocation();
@@ -20,17 +15,19 @@ export default function MeetingPage() {
     [user]
   );
 
-  const notice = location.state?.notice || "";
-  const isHost = location.state?.isHost === true;
-
   return (
     <MockMeetingRoom
       meetingId={decodeURIComponent(meetingId)}
       title={location.state?.title || "Team meeting"}
-      isHost={isHost}
+      isHost={location.state?.isHost === true}
       initialParticipants={participants}
-      initialNotice={notice}
-      onLeave={() => navigate("/", { replace: true, state: { meetingLeft: true } })}
+      initialNotice={location.state?.notice || ""}
+      onLeave={() =>
+        navigate("/", {
+          replace: true,
+          state: { meetingLeft: true },
+        })
+      }
     />
   );
 }

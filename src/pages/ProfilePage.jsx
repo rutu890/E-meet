@@ -26,7 +26,7 @@ export default function ProfilePage() {
             <div className="em-profile-hero-avatar">{profile.photo ? <img src={profile.photo} alt="Profile" decoding="async" /> : initials}</div>
             <h1>{profile.name || "Euodoo Meet user"}</h1>
             <p>{profile.role || "User"}</p>
-            <span className={`em-profile-status-pill ${status === "Available" ? "online" : "away"}`}><i />{status}</span>
+            {/* <span className={`em-profile-status-pill ${status === "Available" ? "online" : "away"}`}><i />{status}</span> */}
             <div className="em-profile-hero-actions"><button className="em-button-primary" onClick={() => navigate("/settings", { state: { activeTab: "profile" } })}><Pencil size={15} /> Edit profile in Settings</button></div>
           </section>
 

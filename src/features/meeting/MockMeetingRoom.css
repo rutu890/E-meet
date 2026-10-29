@@ -152,6 +152,34 @@
   animation: none;
 }
 
+.mr-record-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 13px;
+  border: 1px solid #ffd0bf;
+  border-radius: 24px;
+  background: #fff4ef;
+  color: #c9400d;
+  white-space: nowrap;
+  font-size: 12px;
+  cursor: default;
+  user-select: none;
+}
+
+.mr-record-indicator i {
+  width: 7px;
+  height: 7px;
+  background: #ef510f;
+  border-radius: 50%;
+  animation: mr-pulse 1.4s infinite;
+}
+
+.mr-record-indicator span {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
 .mr-view-switch {
   display: flex;
   align-items: center;
@@ -288,6 +316,17 @@
   transform: scale(1.04);
 }
 
+.mr-tile-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+  z-index: 1;
+  background: #000;
+}
+
 .mr-tile-name {
   position: absolute;
   bottom: 14px;
@@ -306,6 +345,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   backdrop-filter: blur(4px);
+  z-index: 2;
 }
 
 .mr-tile-name span {
@@ -331,7 +371,7 @@
   padding: 5px 12px;
   font-size: 11px;
   font-weight: 600;
-  z-index: 1;
+  z-index: 2;
 }
 
 .mr-host-badge {
@@ -357,6 +397,7 @@
   background: #10272a9e;
   padding: 6px 8px;
   border-radius: 8px;
+  z-index: 2;
 }
 
 .mr-tile-options-btn {
@@ -374,7 +415,7 @@
   cursor: pointer;
   opacity: 0;
   transition: opacity 0.18s ease;
-  z-index: 2;
+  z-index: 3;
 }
 
 .mr-tile:hover .mr-tile-options-btn {
@@ -672,6 +713,16 @@
   font-weight: 700;
   padding: 1px 6px;
   border-radius: 10px;
+}
+
+.mr-cohost-inline-tag {
+  background: #e0f2fe;
+  color: #0284c7;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 10px;
+  margin-left: 4px;
 }
 
 .mr-person-copy small {
@@ -1778,6 +1829,160 @@
   color: #fff;
 }
 
+/* Whiteboard Shapes Dropdown */
+.mr-wb-dropdown-wrap {
+  position: relative;
+}
+
+.mr-wb-shapes-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mr-wb-chevron {
+  transition: transform 0.2s ease;
+}
+
+.mr-wb-chevron.open {
+  transform: rotate(180deg);
+}
+
+.mr-wb-shapes-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.15);
+  padding: 10px;
+  z-index: 50;
+  min-width: 220px;
+  animation: mr-modal-in 0.15s ease;
+}
+
+.mr-wb-shapes-menu-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #64748b;
+  margin-bottom: 8px;
+  padding-left: 4px;
+}
+
+.mr-wb-shapes-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.mr-wb-shape-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.14s ease;
+  text-align: left;
+}
+
+.mr-wb-shape-item:hover {
+  background: #e2e8f0;
+}
+
+.mr-wb-shape-item.selected {
+  background: #e6f6f4;
+  border-color: #00877f;
+  color: #00877f;
+}
+
+.mr-wb-shape-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+}
+
+.mr-wb-active-shape-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  background: #e6f6f4;
+  color: #00877f;
+  border: 1px solid #b7e8e4;
+  border-radius: 14px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* Whiteboard Eraser Size Options */
+.mr-wb-eraser-sizes {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mr-wb-size-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.mr-wb-eraser-size-btn {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.15s ease;
+}
+
+.mr-wb-eraser-size-btn:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.mr-wb-eraser-size-btn.active {
+  background: #e6f6f4;
+  border-color: #00877f;
+  box-shadow: 0 0 0 1px #00877f;
+}
+
+.mr-wb-eraser-dot {
+  background: #475569;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.mr-wb-eraser-cursor-ring {
+  position: absolute;
+  border: 1.5px solid #0f172a;
+  background: rgba(255, 255, 255, 0.45);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 10;
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.2);
+}
+
+.mr-whiteboard-canvas.is-eraser-mode {
+  cursor: none;
+}
+
 .mr-wb-divider {
   width: 1px;
   height: 20px;
@@ -1807,27 +2012,44 @@
   transform: scale(1.15);
 }
 
-.mr-wb-size-group {
+/* Horizontal Line Stroke Thickness Buttons */
+.mr-wb-line-group {
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
-.mr-wb-size-btn {
-  border: 0;
-  background: transparent;
-  padding: 4px 8px;
-  border-radius: 6px;
+.mr-wb-line-btn {
   display: flex;
   align-items: center;
-  gap: 5px;
-  font-size: 11px;
-  color: #475569;
+  justify-content: center;
+  width: 44px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  padding: 0 5px;
   cursor: pointer;
+  transition: all 0.15s ease;
 }
 
-.mr-wb-size-btn.active {
-  background: #e2e8f0;
+.mr-wb-line-btn:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.mr-wb-line-btn.active {
+  background: #e6f6f4;
+  border-color: #00877f;
+  box-shadow: 0 0 0 1px #00877f;
+}
+
+.mr-wb-line-preview {
+  display: block;
+  width: 30px;
+  border-radius: 999px;
+  pointer-events: none;
+  transition: height 0.15s ease, background-color 0.15s ease;
 }
 
 .mr-whiteboard-stage {

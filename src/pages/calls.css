@@ -1,0 +1,162 @@
+
+/* Home dashboard: Today's schedule replaces the meetings list */
+.em-home-schedule {
+  margin-top: 2px;
+  padding: 20px;
+  animation: emPageEnter .3s ease both;
+}
+.em-home-schedule .em-schedule-head {
+  margin-bottom: 12px;
+}
+.em-schedule-subtitle {
+  margin: 4px 0 0;
+  color: #8299aa;
+  font-size: 11px;
+}
+.em-home-schedule .em-schedule-item {
+  padding-top: 13px;
+  padding-bottom: 13px;
+  transition: background .18s ease, transform .18s ease;
+}
+.em-home-schedule .em-schedule-item:hover {
+  background: #f7fbfc;
+  transform: translateX(3px);
+}
+.em-schedule-empty {
+  min-height: 140px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #8ba1b1;
+  text-align: center;
+}
+.em-schedule-empty b { color: #36576a; font-size: 12px; }
+.em-schedule-empty span { font-size: 11px; }
+
+/* Calls page */
+.em-calls-page { animation: emPageEnter .28s ease both; }
+.em-call-history-card {
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #e5edf1;
+  border-radius: 16px;
+  box-shadow: var(--em-shadow);
+}
+.em-call-history-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px;
+  border-bottom: 1px solid #edf2f5;
+}
+.em-call-history-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.em-call-history-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 0;
+  border-radius: 8px;
+  padding: 9px 12px;
+  color: #6e8798;
+  background: transparent;
+  font-size: 11px;
+  transition: background .18s, color .18s, transform .18s;
+}
+.em-call-history-tabs button:hover { background: #f0f8f7; color: #078f87; }
+.em-call-history-tabs button.active { color: #078f87; background: #e3f5f2; font-weight: 700; }
+.em-call-history-tabs button span {
+  border-radius: 20px;
+  padding: 2px 6px;
+  background: #fff;
+  font-size: 9px;
+}
+.em-call-history-search {
+  height: 38px;
+  width: min(100%, 260px);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 11px;
+  color: #8299aa;
+  background: #f7fafb;
+  border: 1px solid #e1ebef;
+  border-radius: 9px;
+}
+.em-call-history-search:focus-within { border-color: #8bcfc9; box-shadow: none; }
+.em-call-history-search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  box-shadow: none !important;
+  background: transparent;
+  color: var(--em-text);
+  font-size: 11px;
+}
+.em-call-history-search input:focus,
+.em-call-history-search input:focus-visible { outline: none !important; box-shadow: none !important; }
+.em-call-history-heading,
+.em-call-history-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.5fr) minmax(85px, .7fr) minmax(115px, .9fr) minmax(90px, .7fr) minmax(80px, .6fr);
+  align-items: center;
+  gap: 14px;
+  padding: 13px 20px;
+}
+.em-call-history-heading {
+  color: #8ba0af;
+  background: #fbfcfd;
+  font-size: 9px;
+  letter-spacing: .7px;
+  font-weight: 700;
+}
+.em-call-history-row {
+  min-height: 76px;
+  border-top: 1px solid #eff3f5;
+  transition: background .18s ease;
+  animation: emPageEnter .24s ease both;
+}
+.em-call-history-row:hover { background: #f9fcfc; }
+.em-call-history-person { display: flex; align-items: center; gap: 11px; min-width: 0; }
+.em-call-history-person > div,
+.em-call-history-time { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.em-call-history-person b,
+.em-call-history-time b { font-size: 11px; color: #254357; }
+.em-call-history-person small,
+.em-call-history-time small { font-size: 10px; color: #8aa0b0; }
+.em-call-history-icon {
+  width: 38px; height: 38px; flex: 0 0 38px;
+  display: grid; place-items: center; border-radius: 12px;
+  background: #e1f5f2; color: #0a9f97;
+}
+.em-call-history-icon.missed { background: #fff0e8; color: #ed6a25; }
+.em-call-history-icon.declined { background: #fff0f0; color: #d85c5c; }
+.em-call-type, .em-call-duration { color: #617c8e; font-size: 11px; }
+.em-call-status { width: max-content; border-radius: 20px; padding: 6px 9px; font-size: 10px; }
+.em-call-status.received { color: #078b67; background: #e2f7ee; }
+.em-call-status.declined { color: #c45151; background: #fff0f0; }
+.em-call-status.missed { color: #d66a21; background: #fff2e7; }
+.em-call-history-empty { min-height: 190px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: #8ba0af; }
+.em-call-history-empty b { color: #38596c; font-size: 12px; }
+.em-call-history-empty span, .em-call-history-note { color: #8ba0af; font-size: 11px; }
+.em-call-history-note { margin: 12px 2px; }
+@media (max-width: 900px) {
+  .em-call-history-toolbar { align-items: stretch; flex-direction: column; }
+  .em-call-history-search { width: 100%; }
+  .em-call-history-heading { display: none; }
+  .em-call-history-row { grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
+  .em-call-history-row > :nth-child(2), .em-call-history-row > :nth-child(5) { display: none; }
+  .em-call-history-time { grid-column: 1; padding-left: 49px; }
+  .em-call-status { grid-column: 2; grid-row: 1 / span 2; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .em-call-history-row, .em-home-schedule { animation: none; }
+  .em-call-history-row, .em-home-schedule .em-schedule-item { transition: none; }
+}

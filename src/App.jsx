@@ -10,8 +10,12 @@ const MeetingPage = lazy(() => import("./pages/MeetingPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const SupportPage = lazy(() => import("./pages/SupportPage"));
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
+const CallsPage = lazy(() => import("./pages/CallsPage"));
 const NotificationHistoryPage = lazy(
   () => import("./pages/NotificationHistoryPage")
+);
+const WaitingRoomPage = lazy(
+  () => import("./features/waiting-room/WaitingRoomPage")
 );
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const AdminLoginPage = lazy(() => import("./pages/AdminLoginPage"));
@@ -43,6 +47,7 @@ export default function App() {
             user ? <Navigate to="/" replace /> : <AuthPage mode="login" />
           }
         />
+        <Route path="/calls" element={<CallsPage />} />
 
         <Route
           path="/signup"
@@ -62,6 +67,14 @@ export default function App() {
         <Route
           path="/notifications"
           element={guard(<NotificationHistoryPage />)}
+        />
+        <Route
+          path="/waiting-room/:meetingId"
+          element={
+            <Suspense fallback={<div>Loading…</div>}>
+              <WaitingRoomPage />
+            </Suspense>
+          }
         />
         <Route path="/support" element={guard(<SupportPage />)} />
         <Route

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import {
   X, PenTool, Eraser, RotateCcw, Trash2, Download, StickyNote,
-  Highlighter, Check, Sparkles, LayoutTemplate
+  Highlighter, Check, LayoutTemplate, Shapes, ChevronDown
 } from "lucide-react";
 
 const COLORS = [
@@ -13,18 +13,84 @@ const COLORS = [
   { name: "Green", hex: "#10b981" },
 ];
 
-const STROKE_SIZES = [
-  { label: "Thin", size: 2 },
-  { label: "Medium", size: 4 },
-  { label: "Thick", size: 8 },
+// Horizontal line stroke thicknesses (visual previews replace "Thin", "Medium", "Thick")
+const STROKE_WIDTHS = [2, 5, 9];
+
+// Eraser thickness options
+const ERASER_SIZES = [20, 36, 56];
+
+// Shapes available for drawing
+const SHAPES = [
+  {
+    id: "rectangle",
+    name: "Rectangle",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="6" width="18" height="12" rx="2" />
+      </svg>
+    ),
+  },
+  {
+    id: "square",
+    name: "Square",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="4" y="4" width="16" height="16" rx="2" />
+      </svg>
+    ),
+  },
+  {
+    id: "circle",
+    name: "Circle",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="9" />
+      </svg>
+    ),
+  },
+  {
+    id: "triangle",
+    name: "Triangle",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polygon points="12 3 22 21 2 21" />
+      </svg>
+    ),
+  },
+  {
+    id: "line",
+    name: "Line",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="4" y1="20" x2="20" y2="4" />
+      </svg>
+    ),
+  },
+  {
+    id: "arrow",
+    name: "Arrow",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="4" y1="12" x2="20" y2="12" />
+        <polyline points="14 6 20 12 14 18" />
+      </svg>
+    ),
+  },
 ];
 
 export default function WhiteboardPanel({ isOpen, onClose, onNotify }) {
   const canvasRef = useRef(null);
   const isDrawing = useRef(false);
-  const [tool, setTool] = useState("pen"); // "pen" | "highlighter" | "eraser"
+  const startCoord = useRef({ x: 0, y: 0 });
+  const offscreenCanvasRef = useRef(null);
+
+  const [tool, setTool] = useState("pen"); // "pen" | "highlighter" | "eraser" | "shape"
+  const [shapeType, setShapeType] = useState("rectangle");
+  const [shapeDropdownOpen, setShapeDropdownOpen] = useState(false);
   const [color, setColor] = useState("#00877f");
-  const [strokeWidth, setStrokeWidth] = useState(3);
+  const [strokeWidth, setStrokeWidth] = useState(2); // default thin (2px)
+  const [eraserSize, setEraserSize] = useState(36); // default medium eraser (36px)
+  const [eraserCursor, setEraserCursor] = useState({ visible: false, x: 0, y: 0 });
   const [history, setHistory] = useState([]);
   const [stickyNotes, setStickyNotes] = useState([
     { id: 1, text: "Design review\nOwner: Dawan", color: "#fef08a", x: 60, y: 80, width: 150 },
@@ -39,39 +105,7 @@ export default function WhiteboardPanel({ isOpen, onClose, onNotify }) {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const dataUrl = canvas.toDataURL();
-    setHistory((prev) => [...prev.slice(-15), dataUrl]);
-  }, []);
-
-  // Initialize and resize canvas
-  const initCanvas = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    if (rect.width === 0 || rect.height === 0) return;
-
-    const dpr = window.devicePixelRatio || 1;
-    // Keep canvas drawing buffer sized to DOM dimensions * DPR
-    if (canvas.width !== Math.floor(rect.width * dpr) || canvas.height !== Math.floor(rect.height * dpr)) {
-      // Save current content before resize
-      const prevData = canvas.toDataURL();
-      canvas.width = Math.floor(rect.width * dpr);
-      canvas.height = Math.floor(rect.height * dpr);
-      const ctx = canvas.getContext("2d");
-      ctx.scale(dpr, dpr);
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
-
-      // Restore previous or draw template
-      const img = new Image();
-      img.onload = () => {
-        ctx.drawImage(img, 0, 0, rect.width, rect.height);
-      };
-      if (prevData && prevData.length > 100) {
-        img.src = prevData;
-      } else {
-        drawQ4Template(ctx, rect.width, rect.height);
-      }
-    }
+    setHistory((prev) => [...prev.slice(-20), dataUrl]);
   }, []);
 
   function drawQ4Template(ctx, w, h) {
@@ -141,6 +175,35 @@ export default function WhiteboardPanel({ isOpen, onClose, onNotify }) {
     ctx.restore();
   }
 
+  // Initialize and resize canvas
+  const initCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    if (canvas.width !== Math.floor(rect.width * dpr) || canvas.height !== Math.floor(rect.height * dpr)) {
+      const prevData = canvas.toDataURL();
+      canvas.width = Math.floor(rect.width * dpr);
+      canvas.height = Math.floor(rect.height * dpr);
+      const ctx = canvas.getContext("2d");
+      ctx.scale(dpr, dpr);
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+
+      const img = new Image();
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0, rect.width, rect.height);
+      };
+      if (prevData && prevData.length > 100) {
+        img.src = prevData;
+      } else {
+        drawQ4Template(ctx, rect.width, rect.height);
+      }
+    }
+  }, []);
+
   useEffect(() => {
     if (!isOpen) return;
     const timer = setTimeout(initCanvas, 50);
@@ -166,36 +229,158 @@ export default function WhiteboardPanel({ isOpen, onClose, onNotify }) {
 
   function startDrawing(e) {
     if (e.button && e.button !== 0) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
     saveState();
     isDrawing.current = true;
     const { x, y } = getCoordinates(e);
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    startCoord.current = { x, y };
+
     const ctx = canvas.getContext("2d");
+
+    if (tool === "shape") {
+      // Snapshot current canvas state to offscreen buffer for smooth live preview
+      if (!offscreenCanvasRef.current) {
+        offscreenCanvasRef.current = document.createElement("canvas");
+      }
+      const off = offscreenCanvasRef.current;
+      off.width = canvas.width;
+      off.height = canvas.height;
+      const offCtx = off.getContext("2d");
+      offCtx.clearRect(0, 0, off.width, off.height);
+      offCtx.drawImage(canvas, 0, 0);
+      return;
+    }
+
     ctx.beginPath();
     ctx.moveTo(x, y);
 
     if (tool === "eraser") {
       ctx.strokeStyle = "#ffffff";
-      ctx.lineWidth = strokeWidth * 6;
+      ctx.lineWidth = eraserSize;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
       ctx.globalAlpha = 1;
+      ctx.lineTo(x, y);
+      ctx.stroke();
     } else if (tool === "highlighter") {
       ctx.strokeStyle = color;
       ctx.lineWidth = strokeWidth * 4;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
       ctx.globalAlpha = 0.35;
     } else {
       ctx.strokeStyle = color;
       ctx.lineWidth = strokeWidth;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
       ctx.globalAlpha = 1;
     }
   }
 
   function draw(e) {
+    const { x, y } = getCoordinates(e);
+
+    if (tool === "eraser") {
+      setEraserCursor({ visible: true, x, y });
+    } else if (eraserCursor.visible) {
+      setEraserCursor((prev) => ({ ...prev, visible: false }));
+    }
+
     if (!isDrawing.current) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
-    const { x, y } = getCoordinates(e);
+
+    if (tool === "shape") {
+      if (!offscreenCanvasRef.current) return;
+      // Restore previous state from offscreen
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(offscreenCanvasRef.current, 0, 0);
+      ctx.restore();
+
+      // Render shape preview with selected thickness and color
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = strokeWidth;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.fillStyle = "transparent";
+
+      const sx = startCoord.current.x;
+      const sy = startCoord.current.y;
+      const w = x - sx;
+      const h = y - sy;
+
+      if (shapeType === "rectangle") {
+        ctx.beginPath();
+        ctx.strokeRect(sx, sy, w, h);
+      } else if (shapeType === "square") {
+        const side = Math.max(Math.abs(w), Math.abs(h));
+        const sw = w >= 0 ? side : -side;
+        const sh = h >= 0 ? side : -side;
+        ctx.beginPath();
+        ctx.strokeRect(sx, sy, sw, sh);
+      } else if (shapeType === "circle") {
+        const rx = Math.abs(w) / 2;
+        const ry = Math.abs(h) / 2;
+        const cx = sx + w / 2;
+        const cy = sy + h / 2;
+        const r = Math.max(rx, ry);
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.stroke();
+      } else if (shapeType === "triangle") {
+        ctx.beginPath();
+        ctx.moveTo(sx + w / 2, sy);
+        ctx.lineTo(sx + w, sy + h);
+        ctx.lineTo(sx, sy + h);
+        ctx.closePath();
+        ctx.stroke();
+      } else if (shapeType === "line") {
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+      } else if (shapeType === "arrow") {
+        const angle = Math.atan2(h, w);
+        const headLen = Math.max(14, strokeWidth * 2.5);
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(
+          x - headLen * Math.cos(angle - Math.PI / 6),
+          y - headLen * Math.sin(angle - Math.PI / 6)
+        );
+        ctx.moveTo(x, y);
+        ctx.lineTo(
+          x - headLen * Math.cos(angle + Math.PI / 6),
+          y - headLen * Math.sin(angle + Math.PI / 6)
+        );
+        ctx.stroke();
+      }
+      ctx.restore();
+      return;
+    }
+
+    if (tool === "eraser") {
+      ctx.save();
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = eraserSize;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.lineTo(x, y);
+      ctx.stroke();
+      ctx.restore();
+      return;
+    }
+
     ctx.lineTo(x, y);
     ctx.stroke();
   }
@@ -290,6 +475,8 @@ export default function WhiteboardPanel({ isOpen, onClose, onNotify }) {
     setStickyNotes((prev) => prev.filter((n) => n.id !== id));
   }
 
+  const activeShapeObj = SHAPES.find((s) => s.id === shapeType) || SHAPES[0];
+
   if (!isOpen) return null;
 
   return (
@@ -362,11 +549,15 @@ export default function WhiteboardPanel({ isOpen, onClose, onNotify }) {
 
         {/* Toolbar Bar */}
         <div className="mr-whiteboard-toolbar">
+          {/* Main Drawing Tools */}
           <div className="mr-wb-tool-group">
             <button
               type="button"
               className={`mr-wb-tool ${tool === "pen" ? "active" : ""}`}
-              onClick={() => setTool("pen")}
+              onClick={() => {
+                setTool("pen");
+                setShapeDropdownOpen(false);
+              }}
               title="Pen tool"
             >
               <PenTool size={16} /> Pen
@@ -374,7 +565,10 @@ export default function WhiteboardPanel({ isOpen, onClose, onNotify }) {
             <button
               type="button"
               className={`mr-wb-tool ${tool === "highlighter" ? "active" : ""}`}
-              onClick={() => setTool("highlighter")}
+              onClick={() => {
+                setTool("highlighter");
+                setShapeDropdownOpen(false);
+              }}
               title="Highlighter"
             >
               <Highlighter size={16} /> Highlight
@@ -382,11 +576,68 @@ export default function WhiteboardPanel({ isOpen, onClose, onNotify }) {
             <button
               type="button"
               className={`mr-wb-tool ${tool === "eraser" ? "active" : ""}`}
-              onClick={() => setTool("eraser")}
+              onClick={() => {
+                setTool("eraser");
+                setShapeDropdownOpen(false);
+              }}
               title="Eraser"
             >
               <Eraser size={16} /> Eraser
             </button>
+
+            {/* Shapes Tool Dropdown */}
+            <div className="mr-wb-dropdown-wrap">
+              <button
+                type="button"
+                className={`mr-wb-tool mr-wb-shapes-btn ${tool === "shape" ? "active" : ""}`}
+                onClick={() => {
+                  setTool("shape");
+                  setShapeDropdownOpen((v) => !v);
+                }}
+                title="Shapes (Rectangle, Square, Circle, Triangle, Line, Arrow)"
+                aria-haspopup="true"
+                aria-expanded={shapeDropdownOpen}
+              >
+                <Shapes size={16} />
+                <span>Shapes</span>
+                <ChevronDown size={12} className={`mr-wb-chevron ${shapeDropdownOpen ? "open" : ""}`} />
+              </button>
+
+              {shapeDropdownOpen && (
+                <div className="mr-wb-shapes-menu" role="menu">
+                  <div className="mr-wb-shapes-menu-title">Select Shape</div>
+                  <div className="mr-wb-shapes-grid">
+                    {SHAPES.map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        role="menuitem"
+                        className={`mr-wb-shape-item ${shapeType === s.id && tool === "shape" ? "selected" : ""}`}
+                        onClick={() => {
+                          setShapeType(s.id);
+                          setTool("shape");
+                          setShapeDropdownOpen(false);
+                          if (onNotify) onNotify(`Selected shape: ${s.name}`, 660);
+                        }}
+                        title={s.name}
+                      >
+                        <span className="mr-wb-shape-icon">{s.icon}</span>
+                        <span className="mr-wb-shape-name">{s.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* If shape tool is active, show the active shape indicator */}
+            {tool === "shape" && (
+              <span className="mr-wb-active-shape-pill" title={`Active shape: ${activeShapeObj.name}`}>
+                {activeShapeObj.icon}
+                <small>{activeShapeObj.name}</small>
+              </span>
+            )}
+
             <button
               type="button"
               className="mr-wb-tool"
@@ -399,51 +650,80 @@ export default function WhiteboardPanel({ isOpen, onClose, onNotify }) {
 
           <div className="mr-wb-divider" />
 
-          {/* Color Palette */}
-          <div className="mr-wb-color-group" title="Stroke color">
-            {COLORS.map((c) => (
-              <button
-                key={c.hex}
-                type="button"
-                className={`mr-wb-color-dot ${color === c.hex && tool !== "eraser" ? "selected" : ""}`}
-                style={{ backgroundColor: c.hex }}
-                onClick={() => {
-                  setColor(c.hex);
-                  if (tool === "eraser") setTool("pen");
-                }}
-                aria-label={c.name}
-              >
-                {color === c.hex && tool !== "eraser" && <Check size={11} color="#fff" />}
-              </button>
-            ))}
-          </div>
+          {/* Eraser Thickness Options (visible when eraser is active) */}
+          {tool === "eraser" && (
+            <>
+              <div className="mr-wb-eraser-sizes" title="Adjust eraser thickness">
+                <span className="mr-wb-size-label">Eraser size:</span>
+                {ERASER_SIZES.map((size) => (
+                  <button
+                    key={size}
+                    type="button"
+                    className={`mr-wb-eraser-size-btn ${eraserSize === size ? "active" : ""}`}
+                    onClick={() => setEraserSize(size)}
+                    title={`Eraser size: ${size}px`}
+                    aria-label={`Eraser size: ${size}px`}
+                  >
+                    <span
+                      className="mr-wb-eraser-dot"
+                      style={{
+                        width: `${Math.round(size / 2.4)}px`,
+                        height: `${Math.round(size / 2.4)}px`,
+                      }}
+                    />
+                  </button>
+                ))}
+              </div>
+              <div className="mr-wb-divider" />
+            </>
+          )}
 
-          <div className="mr-wb-divider" />
+          {/* Color Palette (hidden when eraser is active) */}
+          {tool !== "eraser" && (
+            <>
+              <div className="mr-wb-color-group" title="Stroke color">
+                {COLORS.map((c) => (
+                  <button
+                    key={c.hex}
+                    type="button"
+                    className={`mr-wb-color-dot ${color === c.hex ? "selected" : ""}`}
+                    style={{ backgroundColor: c.hex }}
+                    onClick={() => setColor(c.hex)}
+                    aria-label={c.name}
+                  >
+                    {color === c.hex && <Check size={11} color="#fff" />}
+                  </button>
+                ))}
+              </div>
+              <div className="mr-wb-divider" />
+            </>
+          )}
 
-          {/* Line widths */}
-          <div className="mr-wb-size-group">
-            {STROKE_SIZES.map((s) => (
+          {/* Horizontal Line Previews for Stroke Thickness (replaces "Thin", "Medium", "Thick") */}
+          <div className="mr-wb-line-group" role="radiogroup" aria-label="Stroke thickness">
+            {STROKE_WIDTHS.map((width) => (
               <button
-                key={s.size}
+                key={width}
                 type="button"
-                className={`mr-wb-size-btn ${strokeWidth === s.size ? "active" : ""}`}
-                onClick={() => setStrokeWidth(s.size)}
+                className={`mr-wb-line-btn ${strokeWidth === width ? "active" : ""}`}
+                onClick={() => setStrokeWidth(width)}
+                aria-label={`Stroke thickness ${width}px`}
+                title={`Stroke thickness: ${width}px`}
               >
                 <span
+                  className="mr-wb-line-preview"
                   style={{
-                    width: `${s.size * 2}px`,
-                    height: `${s.size * 2}px`,
-                    borderRadius: "50%",
-                    background: color,
+                    height: `${width}px`,
+                    backgroundColor: tool === "eraser" ? "#475569" : color,
                   }}
                 />
-                <small>{s.label}</small>
               </button>
             ))}
           </div>
 
           <div className="mr-wb-divider" />
 
+          {/* Undo */}
           <button
             type="button"
             className="mr-wb-tool"
@@ -459,15 +739,31 @@ export default function WhiteboardPanel({ isOpen, onClose, onNotify }) {
         <div className="mr-whiteboard-stage">
           <canvas
             ref={canvasRef}
-            className="mr-whiteboard-canvas"
+            className={`mr-whiteboard-canvas ${tool === "eraser" ? "is-eraser-mode" : ""}`}
             onMouseDown={startDrawing}
             onMouseMove={draw}
             onMouseUp={stopDrawing}
-            onMouseLeave={stopDrawing}
+            onMouseLeave={(e) => {
+              setEraserCursor((prev) => ({ ...prev, visible: false }));
+              stopDrawing();
+            }}
             onTouchStart={startDrawing}
             onTouchMove={draw}
             onTouchEnd={stopDrawing}
           />
+
+          {/* Floating visual eraser cursor showing actual eraser diameter */}
+          {tool === "eraser" && eraserCursor.visible && (
+            <div
+              className="mr-wb-eraser-cursor-ring"
+              style={{
+                left: `${eraserCursor.x}px`,
+                top: `${eraserCursor.y}px`,
+                width: `${eraserSize}px`,
+                height: `${eraserSize}px`,
+              }}
+            />
+          )}
 
           {/* Draggable/Editable Sticky Notes */}
           {stickyNotes.map((note) => (

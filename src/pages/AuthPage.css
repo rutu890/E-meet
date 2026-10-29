@@ -1048,3 +1048,92 @@ position: absolute;
   }
 
 }
+.auth-terms-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 0 0 2px;
+  color: #334155;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.auth-terms-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  margin: 2px 0 0;
+  border: 1px solid #d9e1e8;
+  border-radius: 6px;
+  background: #eef2f4;
+  cursor: pointer;
+  position: relative;
+}
+.auth-terms-checkbox:checked {
+  background: #0c9d96;
+  border-color: #0c9d96;
+}
+.auth-terms-checkbox:checked::after {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 2px;
+  width: 6px;
+  height: 11px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.auth-terms-checkbox:focus-visible {
+  outline: 3px solid rgba(12,157,150,.2);
+  outline-offset: 2px;
+}
+.auth-terms-row label {
+  cursor: pointer;
+  font-weight: 400;
+}
+.auth-terms-row a {
+  color: #ed5b18;
+  text-decoration: none;
+  font-weight: 500;
+}
+.auth-terms-row a:hover {
+  text-decoration: underline;
+}
+.auth-terms-row--error .auth-terms-checkbox {
+  border-color: #d94841;
+}
+.auth-terms-error {
+  margin: 5px 0 0 34px;
+}
+
+/* Fix Terms of Service and Privacy Policy alignment */
+.auth-terms-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+}
+
+.auth-terms-row > label {
+  display: block !important;
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 1.6;
+  white-space: normal;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
+.auth-terms-row > label a {
+  display: inline !important;
+  white-space: nowrap;
+  margin: 0;
+}
+
+.auth-terms-checkbox {
+  flex: 0 0 22px;
+}

@@ -44,6 +44,12 @@ function getInitialErrors(values, isSignup) {
     errors.password = "Include at least one letter and one number.";
   }
 
+  if (isSignup) {
+    if (!values.confirmPassword) errors.confirmPassword = "Please confirm your password.";
+    else if (values.password !== values.confirmPassword) errors.confirmPassword = "Passwords do not match.";
+    if (!values.termsAccepted) errors.termsAccepted = "Please accept the Terms of Service and Privacy Policy.";
+  }
+
   return errors;
 }
 
@@ -52,8 +58,11 @@ export default function AuthPage({ mode = "login" }) {
   const navigate = useNavigate();
   const { login, signup: register } = useApp();
 
-  const [values, setValues] = useState({ name: "", email: "", password: "" });
+  const [values, setValues] = useState({
+    name: "", email: "", password: "", confirmPassword: "", termsAccepted: false,
+  });
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [loading, setLoading] = useState(false);
@@ -101,7 +110,7 @@ export default function AuthPage({ mode = "login" }) {
     event.preventDefault();
     const nextErrors = getInitialErrors(values, isSignup);
     setErrors(nextErrors);
-    setTouched({ name: true, email: true, password: true });
+    setTouched({ name: true, email: true, password: true, confirmPassword: true, termsAccepted: true });
 
     if (Object.values(nextErrors).some(Boolean)) {
       notify("Please correct the highlighted fields.", "error");
@@ -353,6 +362,64 @@ export default function AuthPage({ mode = "login" }) {
                   <p className="auth-hint">Use at least 8 characters, including a letter and a number.</p>
                 )}
               </div>
+
+              {isSignup && (
+                <>
+                  <div className="auth-field-group">
+                    <label htmlFor="auth-confirm-password">Confirm password</label>
+                    <div className={fieldClass("confirmPassword")}>
+                      <LockKeyhole size={19} aria-hidden="true" />
+                      <input
+                        id="auth-confirm-password"
+                        type={showConfirmPassword ? "text" : "password"}
+                        autoComplete="new-password"
+                        placeholder="Re-enter your password"
+                        value={values.confirmPassword}
+                        onChange={(event) => updateField("confirmPassword", event.target.value)}
+                        onBlur={() => blurField("confirmPassword")}
+                        aria-invalid={Boolean(touched.confirmPassword && errors.confirmPassword)}
+                        aria-describedby={touched.confirmPassword && errors.confirmPassword ? "auth-confirm-password-error" : undefined}
+                        disabled={loading}
+                      />
+                      <button
+                        type="button"
+                        className="auth-password-toggle"
+                        onClick={() => setShowConfirmPassword((previous) => !previous)}
+                        aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                        disabled={loading}
+                      >
+                        {showConfirmPassword ? <EyeOff size={19} /> : <Eye size={19} />}
+                      </button>
+                    </div>
+                    {touched.confirmPassword && errors.confirmPassword && (
+                      <p className="auth-field-error" id="auth-confirm-password-error">{errors.confirmPassword}</p>
+                    )}
+                  </div>
+
+                  <div className={`auth-terms-row ${touched.termsAccepted && errors.termsAccepted ? "auth-terms-row--error" : ""}`}>
+                    <input
+                      id="auth-terms"
+                      className="auth-terms-checkbox"
+                      type="checkbox"
+                      checked={values.termsAccepted}
+                      onChange={(event) => updateField("termsAccepted", event.target.checked)}
+                      onBlur={() => blurField("termsAccepted")}
+                      aria-invalid={Boolean(touched.termsAccepted && errors.termsAccepted)}
+                      aria-describedby={touched.termsAccepted && errors.termsAccepted ? "auth-terms-error" : undefined}
+                      disabled={loading}
+                    />
+                    <label htmlFor="auth-terms">
+                      I agree to the{" "}
+                      <Link to="/terms" target="_blank" rel="noreferrer">Terms of Service</Link>
+                      {" "}and{" "}
+                      <Link to="/privacy" target="_blank" rel="noreferrer">Privacy Policy</Link>
+                    </label>
+                  </div>
+                  {touched.termsAccepted && errors.termsAccepted && (
+                    <p className="auth-field-error auth-terms-error" id="auth-terms-error">{errors.termsAccepted}</p>
+                  )}
+                </>
+              )}
 
               <button className="auth-submit" type="submit" disabled={loading}>
                 {loading ? (

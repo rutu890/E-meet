@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Camera, CameraOff, Check, Clock3, Copy, Grid2X2, Hand,
-  LockKeyhole, Unlock, MessageSquare, Mic, MicOff, MonitorUp, PhoneOff, Search,
+  LockKeyhole, Unlock, MessageSquare, Mic, MicOff, MonitorUp, Search,
   ShieldCheck, Smile, Subtitles, Users, Video, X, UserRoundPlus,
   LayoutPanelLeft, PanelsTopLeft, Settings, CircleHelp, MoreHorizontal,
   LogOut, Play, Square, UserCheck, Pin, VolumeX, Mail, Share2, Layers, Maximize2
@@ -11,8 +11,7 @@ import WhiteboardPanel from "../chat/WhiteboardPanel";
 import WaitingRoom from "../waiting-room/WaitingRoom";
 import ChatPanel from "../chat/ChatPanel";
 import "./MockMeetingRoom.css";
-
-// 6 participants matching the exact reference screenshot
+import { meetingService } from "../../services/meetingService";
 const DEMO_PEOPLE = [
   { id: "me", name: "Rutuja Kale", initials: "RK", color: "orange", isYou: true, role: "Host", muted: false, cameraOn: false, handRaised: false, connection: "good" },
   { id: "rs", name: "Rithu Singh", initials: "RS", color: "teal", role: "Participant", muted: false, cameraOn: false, handRaised: false, connection: "good" },
@@ -128,14 +127,133 @@ function ToggleSwitch({ checked, onChange, ariaLabel }) {
   );
 }
 
+// Synthetic live video stream for environments without a physical camera
+function createFallbackVideoStream() {
+  if (typeof document === "undefined") return null;
+  const canvas = document.createElement("canvas");
+  canvas.width = 640;
+  canvas.height = 480;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  let frame = 0;
+
+  function draw() {
+    frame++;
+    const gradient = ctx.createLinearGradient(0, 0, 640, 480);
+    const shift = frame % 360;
+    gradient.addColorStop(0, `hsl(${shift}, 35%, 25%)`);
+    gradient.addColorStop(1, `hsl(${(shift + 60) % 360}, 30%, 15%)`);
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 640, 480);
+
+    ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+    ctx.font = "bold 26px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("LIVE VIDEO STREAM", 320, 220);
+
+    ctx.font = "14px monospace";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.65)";
+    const now = new Date().toLocaleTimeString();
+    ctx.fillText(`${now} • Active`, 320, 255);
+
+    ctx.beginPath();
+    const pulse = 5 + Math.sin(frame * 0.1) * 2;
+    ctx.arc(200, 212, pulse, 0, Math.PI * 2);
+    ctx.fillStyle = "#ef4444";
+    ctx.fill();
+  }
+
+  draw();
+  const intervalId = setInterval(draw, 1000 / 30);
+  const stream = canvas.captureStream ? canvas.captureStream(30) : null;
+  if (stream) {
+    const track = stream.getVideoTracks()[0];
+    if (track) {
+      const origStop = track.stop;
+      track.stop = function () {
+        clearInterval(intervalId);
+        if (origStop) origStop.call(this);
+      };
+    }
+  }
+  return stream;
+}
+
+// Fallback audio stream generator
+function createFallbackAudioStream() {
+  try {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return null;
+    const ctx = new AudioContextClass();
+    const osc = ctx.createOscillator();
+    const dst = ctx.createMediaStreamDestination();
+    const gain = ctx.createGain();
+    gain.gain.value = 0.0001;
+    osc.connect(gain);
+    gain.connect(dst);
+    osc.start();
+    const stream = dst.stream;
+    const track = stream.getAudioTracks()[0];
+    if (track) {
+      const origStop = track.stop;
+      track.stop = function () {
+        try {
+          osc.stop();
+          ctx.close();
+        } catch {
+          /* ignore */
+        }
+        if (origStop) origStop.call(this);
+      };
+    }
+    return stream;
+  } catch {
+    return null;
+  }
+}
+
+// Live Video element on participant tile
+function TileVideo({ stream }) {
+  const videoRef = useRef(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (stream) {
+      video.srcObject = stream;
+      video.play().catch((err) => {
+        console.warn("TileVideo play notice:", err);
+      });
+    } else {
+      video.srcObject = null;
+    }
+    return () => {
+      if (video) video.srcObject = null;
+    };
+  }, [stream]);
+
+  return (
+    <video
+      ref={videoRef}
+      className="mr-tile-video"
+      autoPlay
+      playsInline
+      muted
+    />
+  );
+}
+
 function AvatarTile({
   person,
   active = false,
   isMainSpeaker = false,
   isFilmstrip = false,
+  videoStream = null,
   onClick,
   onOptionsClick,
 }) {
+  const showLiveVideo = Boolean(person.cameraOn && (person.isYou ? videoStream : null));
+
   return (
     <div
       className={`mr-tile mr-${person.color} ${active ? "mr-speaking" : ""} ${
@@ -149,7 +267,11 @@ function AvatarTile({
         <span className="mr-tile-badge mr-active-speaker-badge">Active speaker</span>
       )}
 
-      <span className="mr-avatar">{person.initials}</span>
+      {showLiveVideo ? (
+        <TileVideo stream={videoStream} />
+      ) : (
+        <span className="mr-avatar">{person.initials}</span>
+      )}
 
       <div className="mr-tile-name">
         <TileSignalBars strength={person.connection || "good"} />
@@ -212,8 +334,24 @@ export default function MockMeetingRoom({
   });
 
   // Waiting Room list
-  const [waitingList, setWaitingList] = useState(INITIAL_WAITING);
+const [waitingList, setWaitingList] = useState([]);
 
+useEffect(() => {
+  if (!isHost) return;
+
+  return meetingService.subscribe(meetingId, (meeting) => {
+    const waiting = (meeting?.participants || [])
+      .filter((person) => person.status === "waiting")
+      .map((person) => ({
+        ...person,
+        time: "Just now",
+        role: "Participant",
+        connection: "good",
+      }));
+
+    setWaitingList(waiting);
+  });
+}, [meetingId, isHost]);
   // In-meeting Chat messages
   const [messages, setMessages] = useState(INITIAL_MESSAGES);
 
@@ -275,6 +413,20 @@ export default function MockMeetingRoom({
   const [copiedLink, setCopiedLink] = useState(false);
   const toastTimer = useRef(null);
 
+  // Audio stream and recording refs
+  const audioStreamRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const recordedChunksRef = useRef([]);
+  const [micPermissionDenied, setMicPermissionDenied] = useState(false);
+  const [micPermissionAlertOpen, setMicPermissionAlertOpen] = useState(false);
+  const [screenShareConfirmOpen, setScreenShareConfirmOpen] = useState(false);
+
+  // Video stream and camera permission state
+  const [videoStream, setVideoStream] = useState(null);
+  const videoStreamRef = useRef(null);
+  const [cameraPermissionDenied, setCameraPermissionDenied] = useState(false);
+  const [cameraPermissionAlertOpen, setCameraPermissionAlertOpen] = useState(false);
+
   // Filter participants in People panel
   const visiblePeople = useMemo(
     () => people.filter((p) => p.name.toLowerCase().includes(search.toLowerCase())),
@@ -282,6 +434,7 @@ export default function MockMeetingRoom({
   );
 
   const self = people.find((p) => p.isYou) || people[0];
+  const isAuthorizedRecorder = isHost || self.role === "Host" || self.role === "Co-Host";
   const meetingCode = String(meetingId).replace(/[^a-zA-Z0-9-]/g, "").slice(0, 24) || "482-913-207";
 
   // Active speaker selection
@@ -357,36 +510,114 @@ export default function MockMeetingRoom({
     return () => window.clearInterval(timer);
   }, [recording]);
 
-  useEffect(() => {
-    return () => {
-      if (toastTimer.current) window.clearTimeout(toastTimer.current);
-      shareStream?.getTracks().forEach((track) => track.stop());
-    };
-  }, [shareStream]);
+  // useEffect(() => {
+  //   return () => {
+  //     if (toastTimer.current) window.clearTimeout(toastTimer.current);
+  //     if (audioStreamRef.current) {
+  //       audioStreamRef.current.getTracks().forEach((track) => track.stop());
+  //       audioStreamRef.current = null;
+  //     }
+  //     if (videoStreamRef.current) {
+  //       videoStreamRef.current.getTracks().forEach((track) => track.stop());
+  //       videoStreamRef.current = null;
+  //     }
+  //     shareStream?.getTracks().forEach((track) => track.stop());
+  //   };
+  // }, [shareStream]);
+
+  useEffect(() => () => {
+  if (toastTimer.current) clearTimeout(toastTimer.current);
+  audioStreamRef.current?.getTracks().forEach(t => t.stop());
+  videoStreamRef.current?.getTracks().forEach(t => t.stop());
+}, []);
+
+const shareRef = useRef(null);
+useEffect(() => { shareRef.current = shareStream; }, [shareStream]);
+useEffect(() => () => shareRef.current?.getTracks().forEach(t => t.stop()), []);
 
   // Synchronize self updates into people state
   function updateSelf(changes) {
     setPeople((current) => current.map((p) => (p.isYou ? { ...p, ...changes } : p)));
   }
 
+  // --- Real Microphone Stream Acquisition & Track Handling ---
+  const getMicrophoneStream = useCallback(async () => {
+    if (audioStreamRef.current) {
+      const tracks = audioStreamRef.current.getAudioTracks();
+      if (tracks.length > 0 && tracks[0].readyState === "live") {
+        return audioStreamRef.current;
+      }
+    }
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      const fallback = createFallbackAudioStream();
+      if (fallback) {
+        audioStreamRef.current = fallback;
+        return fallback;
+      }
+      return null;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioStreamRef.current = stream;
+      setMicPermissionDenied(false);
+      return stream;
+    } catch (err) {
+      console.warn("Microphone access error:", err);
+      if (
+        err.name === "NotAllowedError" ||
+        err.name === "PermissionDeniedError" ||
+        err.message?.includes("Permission denied")
+      ) {
+        setMicPermissionDenied(true);
+        setMicPermissionAlertOpen(true);
+        notify("Microphone permission denied. Please allow microphone access.", 430);
+        return null;
+      } else {
+        const fallback = createFallbackAudioStream();
+        if (fallback) {
+          audioStreamRef.current = fallback;
+          return fallback;
+        }
+        notify("No microphone hardware device found.", 430);
+        return null;
+      }
+    }
+  }, [notify]);
+
   // --- Microphone Mute / Unmute ---
   async function toggleMic() {
     if (muted) {
-      // Trying to UNMUTE: attempt device access gracefully, never block UI on hardware error
-      try {
-        if (navigator.mediaDevices?.getUserMedia) {
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          stream.getTracks().forEach((track) => track.stop());
-        }
-      } catch (err) {
-        console.warn("Audio hardware error or permission not granted:", err);
-        notify("Microphone hardware unavailable (using demo audio)", 430);
+      // Trying to UNMUTE
+      if (!allowUnmute && !isAuthorizedRecorder) {
+        notify("The host has muted participants and disabled unmuting", 430);
+        return;
       }
+
+      const stream = await getMicrophoneStream();
+      if (!stream && micPermissionDenied) {
+        setMuted(true);
+        updateSelf({ muted: true });
+        return;
+      }
+
+      if (stream) {
+        stream.getAudioTracks().forEach((track) => {
+          track.enabled = true;
+        });
+      }
+
       setMuted(false);
       updateSelf({ muted: false });
       notify("Microphone unmuted", 740);
     } else {
       // Trying to MUTE
+      if (audioStreamRef.current) {
+        audioStreamRef.current.getAudioTracks().forEach((track) => {
+          track.enabled = false;
+        });
+      }
       setMuted(true);
       updateSelf({ muted: true });
       notify("Microphone muted", 520);
@@ -396,38 +627,67 @@ export default function MockMeetingRoom({
   // --- Camera Toggle ---
   async function toggleCamera() {
     if (cameraOn) {
+      // Turn Camera OFF
+      if (videoStreamRef.current) {
+        videoStreamRef.current.getTracks().forEach((track) => {
+          track.enabled = false;
+          track.stop();
+        });
+        videoStreamRef.current = null;
+      }
+      setVideoStream(null);
       setCameraOn(false);
       updateSelf({ cameraOn: false });
       notify("Camera turned off", 520);
       return;
     }
+
+    // Turn Camera ON
     try {
-      if (!navigator.mediaDevices?.getUserMedia) throw new Error("Camera not supported.");
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      stream.getTracks().forEach((track) => track.stop());
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error("Camera API not supported in this browser.");
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+      });
+      videoStreamRef.current = stream;
+      setVideoStream(stream);
+      setCameraPermissionDenied(false);
       setCameraOn(true);
       updateSelf({ cameraOn: true });
       notify("Camera turned on", 740);
-    } catch {
-      // Fallback for demo environments
-      setCameraOn(true);
-      updateSelf({ cameraOn: true });
-      notify("Camera turned on (demo mode)", 740);
+    } catch (err) {
+      console.warn("Camera access error:", err);
+      if (
+        err.name === "NotAllowedError" ||
+        err.name === "PermissionDeniedError" ||
+        err.message?.includes("Permission denied")
+      ) {
+        setCameraPermissionDenied(true);
+        setCameraPermissionAlertOpen(true);
+        notify("Camera permission denied. Please allow camera access in browser.", 430);
+      } else {
+        // Fallback for headless / demo environments without physical camera
+        try {
+          const fallback = createFallbackVideoStream();
+          if (fallback) {
+            videoStreamRef.current = fallback;
+            setVideoStream(fallback);
+            setCameraOn(true);
+            updateSelf({ cameraOn: true });
+            notify("Camera turned on", 740);
+            return;
+          }
+        } catch (fbErr) {
+          console.warn("Fallback video stream error:", fbErr);
+        }
+        notify("Camera unavailable: " + (err.message || "No device found"), 430);
+      }
     }
   }
 
-  // --- Screen Share Toggle ---
-  async function toggleShare() {
-    if (!allowShareScreen && !self.isYou) {
-      notify("Host has disabled screen sharing for participants", 430);
-      return;
-    }
-    if (shareStream) {
-      shareStream.getTracks().forEach((track) => track.stop());
-      setShareStream(null);
-      notify("Screen sharing stopped");
-      return;
-    }
+  // --- Screen Share Toggle with Confirmation ---
+  async function startActualScreenShare() {
     try {
       if (!navigator.mediaDevices?.getDisplayMedia) throw new Error("Screen sharing not supported.");
       const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
@@ -437,6 +697,20 @@ export default function MockMeetingRoom({
     } catch {
       notify("Screen sharing cancelled or unavailable", 430);
     }
+  }
+
+  async function toggleShare() {
+    if (!allowShareScreen && !isAuthorizedRecorder) {
+      notify("Host has disabled screen sharing for participants", 430);
+      return;
+    }
+    if (shareStream) {
+      shareStream.getTracks().forEach((track) => track.stop());
+      setShareStream(null);
+      notify("Screen sharing stopped");
+      return;
+    }
+    setScreenShareConfirmOpen(true);
   }
 
   // --- Invite Copy & Popup ---
@@ -503,8 +777,19 @@ export default function MockMeetingRoom({
 
   // --- Host: Mute All Participants ---
   function handleMuteAllParticipants() {
+    if (!isAuthorizedRecorder && !isHost && self.role !== "Host" && self.role !== "Co-Host") {
+      notify("Only the host or co-host can mute all participants", 430);
+      return;
+    }
     setPeople((current) => current.map((p) => (p.isYou ? p : { ...p, muted: true })));
-    notify("All participants muted by host", 740);
+    setActiveSpeakerId((prevId) => {
+      const activePerson = people.find((p) => p.id === prevId);
+      if (activePerson && !activePerson.isYou) {
+        return self.id || "me";
+      }
+      return prevId;
+    });
+    notify("All participants have been muted.", 740);
   }
 
   // --- Participant mute toggle ---
@@ -539,30 +824,75 @@ export default function MockMeetingRoom({
   }
 
   // --- Waiting Room Actions ---
-  function handleAdmitParticipant(id) {
-    if (meetingLocked) {
-      notify("Meeting is locked. Unlock meeting in Host Tools to admit participants.", 430);
-      return;
-    }
-    const person = waitingList.find((p) => p.id === id);
-    if (!person) return;
-    setWaitingList((current) => current.filter((p) => p.id !== id));
-    setPeople((current) => [
-      ...current,
-      {
-        id: person.id,
-        name: person.name,
-        initials: person.initials,
-        color: person.color || "teal",
+ function handleAdmitParticipant(id) {
+  if (meetingLocked) {
+    notify("Meeting is locked. Unlock it before admitting participants.", 430);
+    return;
+  }
+
+  const person = waitingList.find((item) => item.id === id);
+  if (!person) return;
+
+  meetingService.setParticipantStatus(meetingId, id, "admitted");
+
+  setPeople((current) =>
+    current.some((item) => item.id === id)
+      ? current
+      : [
+          ...current,
+          {
+            ...person,
+            role: "Participant",
+            muted: true,
+            cameraOn: false,
+            handRaised: false,
+            connection: "good",
+          },
+        ]
+  );
+
+  notify(`${person.name} admitted to meeting`, 740);
+}
+
+function handleDenyParticipant(id) {
+  const person = waitingList.find((item) => item.id === id);
+  if (!person) return;
+
+  meetingService.setParticipantStatus(meetingId, id, "denied");
+  notify(`${person.name} denied entry`, 520);
+}
+
+function handleAdmitAllWaiting() {
+  if (meetingLocked) {
+    notify("Meeting is locked. Unlock it before admitting participants.", 430);
+    return;
+  }
+
+  const waiting = [...waitingList];
+  if (!waiting.length) return;
+
+  meetingService.setParticipantsStatus(
+    meetingId,
+    waiting.map((person) => person.id),
+    "admitted"
+  );
+
+  setPeople((current) => [
+    ...current,
+    ...waiting
+      .filter((person) => !current.some((item) => item.id === person.id))
+      .map((person) => ({
+        ...person,
         role: "Participant",
         muted: true,
         cameraOn: false,
         handRaised: false,
         connection: "good",
-      },
-    ]);
-    notify(`${person.name} admitted to meeting`, 740);
-  }
+      })),
+  ]);
+
+  notify(`${waiting.length} attendees admitted to meeting`, 740);
+}
 
   function handleDenyParticipant(id) {
     const person = waitingList.find((p) => p.id === id);
@@ -592,8 +922,12 @@ export default function MockMeetingRoom({
     notify(`${count} attendees admitted to meeting`, 740);
   }
 
-  // Record toggle with confirmation popups
+  // Record toggle with confirmation popups (Host and Co-Host only)
   function handleRecordButtonClick() {
+    if (!isAuthorizedRecorder) {
+      notify("Recording is restricted to Host and Co-Host only", 430);
+      return;
+    }
     if (recording) {
       setRecordStopConfirmOpen(true);
     } else {
@@ -602,14 +936,42 @@ export default function MockMeetingRoom({
   }
 
   function confirmStartRecording() {
+    if (!isAuthorizedRecorder) {
+      notify("Only Host and Co-Host can start recording", 430);
+      return;
+    }
     setRecording(true);
     setRecordStartConfirmOpen(false);
+    try {
+      if (typeof MediaRecorder !== "undefined" && audioStreamRef.current) {
+        const rec = new MediaRecorder(audioStreamRef.current);
+        rec.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) recordedChunksRef.current.push(e.data);
+        };
+        rec.start(1000);
+        mediaRecorderRef.current = rec;
+      }
+    } catch (err) {
+      console.warn("MediaRecorder integration notice:", err);
+    }
     notify("Recording started", 740);
   }
 
   function confirmStopRecording() {
+    if (!isAuthorizedRecorder) {
+      notify("Only Host and Co-Host can stop recording", 430);
+      return;
+    }
     setRecording(false);
     setRecordStopConfirmOpen(false);
+    try {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        mediaRecorderRef.current.stop();
+        mediaRecorderRef.current = null;
+      }
+    } catch (err) {
+      console.warn("MediaRecorder stop notice:", err);
+    }
     notify("Recording stopped and saved to cloud", 520);
   }
 
@@ -653,14 +1015,27 @@ export default function MockMeetingRoom({
         </div>
 
         <div className="mr-header-actions">
-          {/* Recording Pill */}
-          <button
-            className={`mr-record-pill ${recording ? "" : "is-off"}`}
-            onClick={handleRecordButtonClick}
-            title={recording ? "Click to stop recording" : "Click to start recording"}
-          >
-            <i /> {recording ? "REC" : "Recording off"} {recording && <span>{recordLabel}</span>}
-          </button>
+          {/* Recording: Only Host and Co-Host can start or stop recording. Regular participants see a read-only indicator if recording, and nothing if off */}
+          {isAuthorizedRecorder ? (
+            <button
+              type="button"
+              className={`mr-record-pill ${recording ? "" : "is-off"}`}
+              onClick={handleRecordButtonClick}
+              title={recording ? "Click to stop recording" : "Click to start recording"}
+              aria-label={recording ? "Stop recording" : "Start recording"}
+            >
+              <i /> {recording ? "REC" : "Record"} {recording && <span>{recordLabel}</span>}
+            </button>
+          ) : recording ? (
+            <div
+              className="mr-record-indicator"
+              title="Meeting is being recorded by the host"
+              role="status"
+              aria-label="Meeting is being recorded"
+            >
+              <i /> REC <span>{recordLabel}</span>
+            </div>
+          ) : null}
 
           {/* View Switch */}
           <div className="mr-view-switch" role="tablist" aria-label="Meeting layout">
@@ -737,6 +1112,7 @@ export default function MockMeetingRoom({
                   }}
                   active={true}
                   isMainSpeaker={true}
+                  videoStream={activeSpeaker.isYou ? videoStream : null}
                   onClick={() => {}}
                   onOptionsClick={(id, e) => {
                     const rect = e.currentTarget.getBoundingClientRect();
@@ -766,6 +1142,7 @@ export default function MockMeetingRoom({
                         }}
                         active={person.id === activeSpeaker.id}
                         isFilmstrip={true}
+                        videoStream={person.isYou ? videoStream : null}
                         onClick={() => handleSelectSpeaker(person.id, person.name)}
                         onOptionsClick={(id, e) => {
                           const rect = e.currentTarget.getBoundingClientRect();
@@ -789,6 +1166,7 @@ export default function MockMeetingRoom({
                 }}
                 active={true}
                 isMainSpeaker={true}
+                videoStream={activeSpeaker.isYou ? videoStream : null}
                 onClick={() => {}}
                 onOptionsClick={(id, e) => {
                   const rect = e.currentTarget.getBoundingClientRect();
@@ -809,6 +1187,7 @@ export default function MockMeetingRoom({
                     handRaised: person.isYou ? handRaised : person.handRaised,
                   }}
                   active={person.id === activeSpeaker.id}
+                  videoStream={person.isYou ? videoStream : null}
                   onClick={() => handleSelectSpeaker(person.id, person.name)}
                   onOptionsClick={(id, e) => {
                     const rect = e.currentTarget.getBoundingClientRect();
@@ -916,10 +1295,11 @@ export default function MockMeetingRoom({
                           {person.isYou ? " (You)" : " (Sample)"}
                         </strong>
                         {person.role === "Host" && <span className="mr-host-inline-tag">Host</span>}
+                        {person.role === "Co-Host" && <span className="mr-cohost-inline-tag">Co-Host</span>}
                       </div>
                       <small className={isPersonHandRaised ? "mr-status-raised" : ""}>
                         {person.isYou
-                          ? "You (Host)"
+                          ? `You (${person.role || "Host"})`
                           : isPersonHandRaised
                           ? "Raised hand"
                           : person.role || "Participant"}
@@ -1105,13 +1485,15 @@ export default function MockMeetingRoom({
             <small>Waiting room</small>
           </div>
 
-          {/* Host Tools Button */}
-          <Control
-            icon={<ShieldCheck />}
-            label="Host tools"
-            active={hostToolsOpen}
-            onClick={() => setHostToolsOpen((v) => !v)}
-          />
+          {/* Host Tools Button - Only accessible for Host and Co-Host */}
+          {isAuthorizedRecorder && (
+            <Control
+              icon={<ShieldCheck />}
+              label="Host tools"
+              active={hostToolsOpen}
+              onClick={() => setHostToolsOpen((v) => !v)}
+            />
+          )}
 
           {/* Whiteboard Button */}
           <Control
@@ -1156,13 +1538,14 @@ export default function MockMeetingRoom({
           />
         </div>
 
-        {/* Leave Button */}
+        {/* Leave Button - Displays only the text "Leave" with no SVG icon */}
         <button
           type="button"
           className="mr-leave-button"
           onClick={() => setLeaveOpen(true)}
+          aria-label="Leave meeting"
         >
-          <PhoneOff size={17} /> Leave
+          Leave
         </button>
       </footer>
 
@@ -1384,7 +1767,7 @@ export default function MockMeetingRoom({
                   setEndMeetingAllOpen(true);
                 }}
               >
-                <PhoneOff size={16} /> End meeting for all
+                End meeting for all
               </button>
             </div>
           </div>
@@ -1504,6 +1887,34 @@ export default function MockMeetingRoom({
             >
               <VolumeX size={15} /> Toggle mute
             </button>
+            {isAuthorizedRecorder && (
+              <button
+                type="button"
+                onClick={() => {
+                  const target = people.find((p) => p.id === participantMenu.id);
+                  if (target) {
+                    const isNowCoHost = target.role !== "Co-Host";
+                    setPeople((prev) =>
+                      prev.map((p) =>
+                        p.id === target.id
+                          ? { ...p, role: isNowCoHost ? "Co-Host" : "Participant" }
+                          : p
+                      )
+                    );
+                    notify(
+                      `${target.name} is ${isNowCoHost ? "now a Co-Host" : "no longer a Co-Host"}`,
+                      740
+                    );
+                  }
+                  setParticipantMenu(null);
+                }}
+              >
+                <ShieldCheck size={15} />{" "}
+                {people.find((p) => p.id === participantMenu.id)?.role === "Co-Host"
+                  ? "Remove Co-Host"
+                  : "Make Co-Host"}
+              </button>
+            )}
             <button
               type="button"
               className="danger"
@@ -1542,7 +1953,7 @@ export default function MockMeetingRoom({
             <span className="mr-modal-icon">
               <Play size={22} />
             </span>
-            <h2 id="mr-rec-start-title">Start recording?</h2>
+            <h2 id="mr-rec-start-title">Do you want to start recording?</h2>
             <p>
               By starting recording, all meeting attendees will be notified that this video session and in-call chat are being recorded for corporate compliance.
             </p>
@@ -1559,7 +1970,7 @@ export default function MockMeetingRoom({
                 className="mr-primary-button"
                 onClick={confirmStartRecording}
               >
-                <Play size={15} /> Start recording
+                <Play size={15} /> Start Recording
               </button>
             </div>
           </section>
@@ -1583,7 +1994,7 @@ export default function MockMeetingRoom({
             <span className="mr-modal-icon mr-danger-icon">
               <Square size={22} />
             </span>
-            <h2 id="mr-rec-stop-title">Stop recording?</h2>
+            <h2 id="mr-rec-stop-title">Do you want to stop recording?</h2>
             <p>
               Are you sure you want to stop recording this meeting? The recorded MP4 file will be processed and saved to your cloud workspace.
             </p>
@@ -1593,14 +2004,146 @@ export default function MockMeetingRoom({
                 className="mr-outline-button"
                 onClick={() => setRecordStopConfirmOpen(false)}
               >
-                Continue recording
+                Cancel
               </button>
               <button
                 type="button"
                 className="mr-leave-button"
                 onClick={confirmStopRecording}
               >
-                <Square size={15} /> Stop recording
+                <Square size={15} /> Stop Recording
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {/* --- Microphone Permission Notification Popup --- */}
+      {micPermissionAlertOpen && (
+        <div
+          className="mr-modal-backdrop"
+          onMouseDown={(e) => e.target === e.currentTarget && setMicPermissionAlertOpen(false)}
+        >
+          <section className="mr-modal" role="dialog" aria-modal="true" aria-labelledby="mr-mic-perm-title">
+            <button
+              className="mr-modal-close"
+              onClick={() => setMicPermissionAlertOpen(false)}
+              aria-label="Close"
+            >
+              <X size={18} />
+            </button>
+            <span className="mr-modal-icon mr-danger-icon">
+              <MicOff size={22} />
+            </span>
+            <h2 id="mr-mic-perm-title">Microphone permission required</h2>
+            <p>
+              Euodoo Meet cannot access your microphone because browser permission was denied. Please allow microphone access in your browser site settings to participate with audio.
+            </p>
+            <div className="mr-modal-actions">
+              <button
+                type="button"
+                className="mr-outline-button"
+                onClick={() => setMicPermissionAlertOpen(false)}
+              >
+                Dismiss
+              </button>
+              <button
+                type="button"
+                className="mr-primary-button"
+                onClick={async () => {
+                  setMicPermissionAlertOpen(false);
+                  await toggleMic();
+                }}
+              >
+                <Mic size={15} /> Retry access
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {/* --- Camera Permission Notification Popup --- */}
+      {cameraPermissionAlertOpen && (
+        <div
+          className="mr-modal-backdrop"
+          onMouseDown={(e) => e.target === e.currentTarget && setCameraPermissionAlertOpen(false)}
+        >
+          <section className="mr-modal" role="dialog" aria-modal="true" aria-labelledby="mr-cam-perm-title">
+            <button
+              className="mr-modal-close"
+              onClick={() => setCameraPermissionAlertOpen(false)}
+              aria-label="Close"
+            >
+              <X size={18} />
+            </button>
+            <span className="mr-modal-icon mr-danger-icon">
+              <CameraOff size={22} />
+            </span>
+            <h2 id="mr-cam-perm-title">Camera permission required</h2>
+            <p>
+              Euodoo Meet cannot access your camera because browser permission was denied. Please allow camera access in your browser site settings to participate with live video.
+            </p>
+            <div className="mr-modal-actions">
+              <button
+                type="button"
+                className="mr-outline-button"
+                onClick={() => setCameraPermissionAlertOpen(false)}
+              >
+                Dismiss
+              </button>
+              <button
+                type="button"
+                className="mr-primary-button"
+                onClick={async () => {
+                  setCameraPermissionAlertOpen(false);
+                  await toggleCamera();
+                }}
+              >
+                <Camera size={15} /> Retry access
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {/* --- Screen Sharing Confirmation Popup --- */}
+      {screenShareConfirmOpen && (
+        <div
+          className="mr-modal-backdrop"
+          onMouseDown={(e) => e.target === e.currentTarget && setScreenShareConfirmOpen(false)}
+        >
+          <section className="mr-modal" role="dialog" aria-modal="true" aria-labelledby="mr-share-title">
+            <button
+              className="mr-modal-close"
+              onClick={() => setScreenShareConfirmOpen(false)}
+              aria-label="Close"
+            >
+              <X size={18} />
+            </button>
+            <span className="mr-modal-icon">
+              <MonitorUp size={22} />
+            </span>
+            <h2 id="mr-share-title">Share your screen?</h2>
+            <p>
+              You are about to present your screen, window, or tab to all attendees in this corporate meeting.
+            </p>
+            <div className="mr-modal-actions">
+              <button
+                type="button"
+                className="mr-outline-button"
+                onClick={() => setScreenShareConfirmOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="mr-primary-button"
+                onClick={async () => {
+                  setScreenShareConfirmOpen(false);
+                  await startActualScreenShare();
+                }}
+              >
+                <MonitorUp size={15} /> Start sharing
               </button>
             </div>
           </section>
@@ -1674,9 +2217,6 @@ export default function MockMeetingRoom({
             >
               <X size={18} />
             </button>
-            <span className="mr-modal-icon mr-danger-icon">
-              <PhoneOff size={22} />
-            </span>
             <h2 id="mr-leave-title">Leave this meeting?</h2>
             <p>You will exit the session and return to your Euodoo Meet dashboard.</p>
             <div className="mr-modal-actions">
@@ -1685,14 +2225,14 @@ export default function MockMeetingRoom({
                 className="mr-outline-button"
                 onClick={() => setLeaveOpen(false)}
               >
-                Stay in meeting
+                Cancel
               </button>
               <button
                 type="button"
                 className="mr-leave-button"
                 onClick={handleLeaveMeeting}
               >
-                <PhoneOff size={16} /> Leave meeting
+                Leave
               </button>
             </div>
           </section>
@@ -1713,9 +2253,6 @@ export default function MockMeetingRoom({
             >
               <X size={18} />
             </button>
-            <span className="mr-modal-icon mr-danger-icon">
-              <PhoneOff size={22} />
-            </span>
             <h2 id="mr-end-all-title">End meeting for all?</h2>
             <p>
               Are you sure you want to end the meeting for everyone? This will immediately disconnect all {people.length} participants and close the conference room.
@@ -1733,7 +2270,7 @@ export default function MockMeetingRoom({
                 className="mr-leave-button"
                 onClick={handleEndMeetingForAll}
               >
-                <PhoneOff size={16} /> End meeting for all
+                End meeting for all
               </button>
             </div>
           </section>
