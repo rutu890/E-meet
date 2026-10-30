@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { adminAuthService } from "../services/adminAuthService";
 import { playTone } 
- from "../../utils/tones";
+ from "../utils/Tones";
 import "./AdminLoginPage.css";
 import "./admin-enhancements.css";
 
