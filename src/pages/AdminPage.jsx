@@ -32,7 +32,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { adminAuthService } from "../services/adminAuthService";
-import { playTone } from "../utils/tones";
+import { playTone } from "../../utils/tones";
 import "./AdminPage.css";
 import "./admin-enhancements.css";
 
