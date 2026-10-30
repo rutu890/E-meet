@@ -1,6 +1,23 @@
-import { useMemo, useState } from "react";
-import { PhoneIncoming, PhoneMissed, PhoneOff, Search, Video } from "lucide-react";
+
+import {
+  memo,
+  useDeferredValue,
+  useMemo,
+  useState,
+} from "react";
+
+import {
+  PhoneIncoming,
+  PhoneMissed,
+  PhoneOff,
+  Search,
+  Video,
+  Copy,
+  X,
+} from "lucide-react";
+
 import DashboardLayout from "../components/DashboardLayout";
+import { showSuccess, showError } from "../utils/uiFeedback";
 import "./calls.css";
 
 const demoCalls = [
@@ -18,62 +35,200 @@ const statusIcon = {
   Missed: PhoneMissed,
 };
 
-export default function CallsPage() {
-  const [filter, setFilter] = useState("All calls");
+const CallRow = memo(function CallRow({ call, index }) {
+  const Icon = statusIcon[call.status] || Video;
+
+  const handleCopy = async () => {
+    const details = [
+      call.name,
+      call.type,
+      call.status,
+      `${call.date}, ${call.time}`,
+      call.duration,
+    ].join(" | ");
+
+    try {
+      await navigator.clipboard.writeText(details);
+      showSuccess("Call details copied");
+    } catch {
+      showError("Unable to copy call details");
+    }
+  };
+
+  return (
+    <article
+      className="em-call-history-row"
+      style={{ "--row-index": index }}
+    >
+      <div className="em-call-history-person">
+        <span className={`em-call-history-icon ${call.status.toLowerCase()}`}>
+          <Icon size={17} />
+        </span>
+
+        <div>
+          <b>{call.name}</b>
+          <small>
+            {call.id.toString().padStart(3, "0")} · Call record
+          </small>
+        </div>
+      </div>
+
+      <span className="em-call-type">{call.type}</span>
+
+      <div className="em-call-history-time">
+        <b>{call.date}</b>
+        <small>{call.time}</small>
+      </div>
+
+      <span className={`em-call-status ${call.status.toLowerCase()}`}>
+        {call.status}
+      </span>
+
+      <span className="em-call-duration">{call.duration}</span>
+
+      <button
+        type="button"
+        className="em-call-copy"
+        onClick={handleCopy}
+        aria-label={`Copy ${call.name} call details`}
+        title="Copy call details"
+      >
+        <Copy size={15} />
+      </button>
+    </article>
+  );
+});
+
+function CallsSkeleton() {
+  return (
+    <div className="em-call-skeleton-list" aria-label="Loading calls">
+      {Array.from({ length: 5 }, (_, index) => (
+        <div className="em-call-skeleton-row" key={index}>
+          <div className="em-skeleton-person">
+            <span className="em-skeleton em-skeleton-avatar" />
+            <div>
+              <span className="em-skeleton em-skeleton-name" />
+              <span className="em-skeleton em-skeleton-subtitle" />
+            </div>
+          </div>
+
+          <span className="em-skeleton em-skeleton-text" />
+          <span className="em-skeleton em-skeleton-text" />
+          <span className="em-skeleton em-skeleton-badge" />
+          <span className="em-skeleton em-skeleton-text" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export default function CallsPage({ loading = false }) {
   const [query, setQuery] = useState("");
-  const calls = useMemo(() => demoCalls.filter((call) => {
-    const matchesFilter = filter === "All calls" || call.status === filter;
-    const matchesQuery = `${call.name} ${call.type} ${call.date} ${call.status}`.toLowerCase().includes(query.toLowerCase());
-    return matchesFilter && matchesQuery;
-  }), [filter, query]);
+
+  const deferredQuery = useDeferredValue(query);
+
+  const calls = useMemo(() => {
+    const search = deferredQuery.trim().toLowerCase();
+
+    if (!search) return demoCalls;
+
+    return demoCalls.filter((call) =>
+      `${call.name} ${call.type} ${call.date} ${call.time} ${call.status} ${call.duration}`
+        .toLowerCase()
+        .includes(search)
+    );
+  }, [deferredQuery]);
+
+  const clearSearch = () => {
+    setQuery("");
+  };
 
   return (
     <DashboardLayout page="calls">
       <main className="em-page em-calls-page">
+
         <header className="em-page-heading">
           <div>
-            {/* <span className="em-page-kicker">COMMUNICATION</span> */}
             <h1>Calls</h1>
-            <p>Your incoming and outgoing call history, with status and time.</p>
+            <p>
+              Your incoming and outgoing call history, with status and time.
+            </p>
           </div>
         </header>
 
         <section className="em-call-history-card">
+
           <div className="em-call-history-toolbar">
-            <div className="em-call-history-tabs" role="group" aria-label="Filter calls">
-              {["All calls", "Received", "Declined", "Missed"].map((item) => (
-                <button key={item} className={filter === item ? "active" : ""} onClick={() => setFilter(item)}>
-                  {item}
-                  {item === "All calls" && <span>{demoCalls.length}</span>}
-                </button>
-              ))}
+
+            <div className="em-call-history-title">
+              <b>All calls</b>
+              <span>{calls.length} calls</span>
             </div>
+
             <label className="em-call-history-search">
               <Search size={16} />
-              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search calls..." aria-label="Search calls" />
+
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search calls..."
+                aria-label="Search calls"
+              />
+
+              {query && (
+                <button
+                  type="button"
+                  onClick={clearSearch}
+                  className="em-search-clear"
+                  aria-label="Clear search"
+                >
+                  <X size={15} />
+                </button>
+              )}
             </label>
+
           </div>
 
           <div className="em-call-history-heading">
-            <span>CALL / CONTACT</span><span>TYPE</span><span>DATE & TIME</span><span>STATUS</span><span>DURATION</span>
+            <span>CALL / CONTACT</span>
+            <span>TYPE</span>
+            <span>DATE & TIME</span>
+            <span>STATUS</span>
+            <span>DURATION</span>
+            <span />
           </div>
-          {calls.length ? calls.map((call) => {
-            const Icon = statusIcon[call.status] || Video;
-            return (
-              <article className="em-call-history-row" key={call.id}>
-                <div className="em-call-history-person">
-                  <span className={`em-call-history-icon ${call.status.toLowerCase()}`}><Icon size={17} /></span>
-                  <div><b>{call.name}</b><small>{call.id.toString().padStart(3, "0")} · Call record</small></div>
-                </div>
-                <span className="em-call-type">{call.type}</span>
-                <div className="em-call-history-time"><b>{call.date}</b><small>{call.time}</small></div>
-                <span className={`em-call-status ${call.status.toLowerCase()}`}>{call.status}</span>
-                <span className="em-call-duration">{call.duration}</span>
-              </article>
-            );
-          }) : <div className="em-call-history-empty"><PhoneIncoming size={24} /><b>No calls found</b><span>Try a different status or search term.</span></div>}
+
+          {loading ? (
+            <CallsSkeleton />
+          ) : calls.length ? (
+            <div className="em-call-history-list">
+              {calls.map((call, index) => (
+                <CallRow
+                  key={call.id}
+                  call={call}
+                  index={index}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="em-call-history-empty">
+              <Search size={25} />
+              <b>No calls found</b>
+              <span>Try another name or search term.</span>
+              {query && (
+                <button onClick={clearSearch} type="button">
+                  Clear search
+                </button>
+              )}
+            </div>
+          )}
+
         </section>
-        <p className="em-call-history-note">Demo call history · connect a call-history API to show real account activity.</p>
+
+        <p className="em-call-history-note">
+          Demo call history · Connect a call-history API to show real account activity.
+        </p>
+
       </main>
     </DashboardLayout>
   );

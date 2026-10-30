@@ -1,27 +1,40 @@
 
-/* Home dashboard: Today's schedule replaces the meetings list */
+/* =========================================
+   HOME SCHEDULE
+========================================= */
+
 .em-home-schedule {
   margin-top: 2px;
   padding: 20px;
-  animation: emPageEnter .3s ease both;
+  animation: emFadeUp .4s ease both;
+  contain: layout style;
 }
+
 .em-home-schedule .em-schedule-head {
   margin-bottom: 12px;
 }
+
 .em-schedule-subtitle {
   margin: 4px 0 0;
   color: #8299aa;
   font-size: 11px;
 }
+
 .em-home-schedule .em-schedule-item {
-  padding-top: 13px;
-  padding-bottom: 13px;
-  transition: background .18s ease, transform .18s ease;
+  padding: 13px 10px;
+  border-radius: 10px;
+  transition: background .2s ease, transform .2s ease;
 }
+
 .em-home-schedule .em-schedule-item:hover {
-  background: #f7fbfc;
-  transform: translateX(3px);
+  background: #f2faf9;
+  transform: translateX(4px);
 }
+
+.em-home-schedule .em-schedule-item:active {
+  transform: scale(.99);
+}
+
 .em-schedule-empty {
   min-height: 140px;
   display: flex;
@@ -32,19 +45,41 @@
   color: #8ba1b1;
   text-align: center;
 }
-.em-schedule-empty b { color: #36576a; font-size: 12px; }
-.em-schedule-empty span { font-size: 11px; }
 
-/* Calls page */
-.em-calls-page { animation: emPageEnter .28s ease both; }
+.em-schedule-empty b {
+  color: #36576a;
+  font-size: 12px;
+}
+
+.em-schedule-empty span {
+  font-size: 11px;
+}
+
+/* =========================================
+   CALLS PAGE
+========================================= */
+
+.em-calls-page {
+  animation: emFadeUp .35s ease both;
+}
+
 .em-call-history-card {
   overflow: hidden;
   background: #fff;
   border: 1px solid #e5edf1;
   border-radius: 16px;
   box-shadow: var(--em-shadow);
+  transition: box-shadow .25s ease;
 }
+
+.em-call-history-card:hover {
+  box-shadow: 0 12px 32px rgba(40, 85, 100, .07);
+}
+
+/* Toolbar */
+
 .em-call-history-toolbar {
+  min-height: 74px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -52,111 +87,523 @@
   padding: 18px;
   border-bottom: 1px solid #edf2f5;
 }
-.em-call-history-tabs {
+
+.em-call-history-title {
   display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-}
-.em-call-history-tabs button {
-  display: inline-flex;
   align-items: center;
-  gap: 7px;
-  border: 0;
-  border-radius: 8px;
-  padding: 9px 12px;
-  color: #6e8798;
-  background: transparent;
-  font-size: 11px;
-  transition: background .18s, color .18s, transform .18s;
+  gap: 9px;
 }
-.em-call-history-tabs button:hover { background: #f0f8f7; color: #078f87; }
-.em-call-history-tabs button.active { color: #078f87; background: #e3f5f2; font-weight: 700; }
-.em-call-history-tabs button span {
+
+.em-call-history-title b {
+  color: #078f87;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.em-call-history-title span {
+  padding: 3px 7px;
   border-radius: 20px;
-  padding: 2px 6px;
-  background: #fff;
-  font-size: 9px;
+  background: #e3f5f2;
+  color: #078f87;
+  font-size: 10px;
+  font-weight: 600;
 }
+
+/* Search */
+
 .em-call-history-search {
-  height: 38px;
-  width: min(100%, 260px);
+  height: 40px;
+  width: min(100%, 280px);
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 0 11px;
+  gap: 9px;
+  padding: 0 12px;
   color: #8299aa;
   background: #f7fafb;
   border: 1px solid #e1ebef;
-  border-radius: 9px;
+  border-radius: 10px;
+  transition: border-color .2s ease, background .2s ease,
+    box-shadow .2s ease;
 }
-.em-call-history-search:focus-within { border-color: #8bcfc9; box-shadow: none; }
+
+.em-call-history-search:hover {
+  background: #fff;
+  border-color: #c6e5e1;
+}
+
+.em-call-history-search:focus-within {
+  border-color: #75c7be;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(8, 159, 151, .08);
+}
+
 .em-call-history-search input {
   width: 100%;
   min-width: 0;
   border: 0;
-  outline: 0;
+  outline: none;
   box-shadow: none !important;
   background: transparent;
   color: var(--em-text);
   font-size: 11px;
 }
-.em-call-history-search input:focus,
-.em-call-history-search input:focus-visible { outline: none !important; box-shadow: none !important; }
+
+.em-call-history-search input:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.em-search-clear {
+  display: grid;
+  place-items: center;
+  padding: 4px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #8299aa;
+  cursor: pointer;
+  transition: background .2s, color .2s;
+}
+
+.em-search-clear:hover {
+  background: #e3f5f2;
+  color: #078f87;
+}
+
+/* Table heading */
+
 .em-call-history-heading,
 .em-call-history-row {
   display: grid;
-  grid-template-columns: minmax(180px, 1.5fr) minmax(85px, .7fr) minmax(115px, .9fr) minmax(90px, .7fr) minmax(80px, .6fr);
+  grid-template-columns:
+    minmax(180px, 1.5fr)
+    minmax(85px, .7fr)
+    minmax(115px, .9fr)
+    minmax(90px, .7fr)
+    minmax(80px, .6fr)
+    30px;
   align-items: center;
   gap: 14px;
   padding: 13px 20px;
 }
+
 .em-call-history-heading {
+  min-height: 46px;
   color: #8ba0af;
   background: #fbfcfd;
   font-size: 9px;
   letter-spacing: .7px;
   font-weight: 700;
 }
+
+/* Call rows */
+
 .em-call-history-row {
   min-height: 76px;
   border-top: 1px solid #eff3f5;
-  transition: background .18s ease;
-  animation: emPageEnter .24s ease both;
+  transition: background .2s ease;
+  animation: emRowEnter .35s ease both;
+  animation-delay: calc(var(--row-index, 0) * 35ms);
 }
-.em-call-history-row:hover { background: #f9fcfc; }
-.em-call-history-person { display: flex; align-items: center; gap: 11px; min-width: 0; }
+
+.em-call-history-row:hover {
+  background: #f5fbfa;
+}
+
+.em-call-history-person {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+}
+
 .em-call-history-person > div,
-.em-call-history-time { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.em-call-history-time {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
 .em-call-history-person b,
-.em-call-history-time b { font-size: 11px; color: #254357; }
+.em-call-history-time b {
+  font-size: 11px;
+  color: #254357;
+}
+
 .em-call-history-person small,
-.em-call-history-time small { font-size: 10px; color: #8aa0b0; }
+.em-call-history-time small {
+  font-size: 10px;
+  color: #8aa0b0;
+}
+
+/* Contact icons */
+
 .em-call-history-icon {
-  width: 38px; height: 38px; flex: 0 0 38px;
-  display: grid; place-items: center; border-radius: 12px;
-  background: #e1f5f2; color: #0a9f97;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: #e1f5f2;
+  color: #0a9f97;
+  transition: transform .22s ease;
 }
-.em-call-history-icon.missed { background: #fff0e8; color: #ed6a25; }
-.em-call-history-icon.declined { background: #fff0f0; color: #d85c5c; }
-.em-call-type, .em-call-duration { color: #617c8e; font-size: 11px; }
-.em-call-status { width: max-content; border-radius: 20px; padding: 6px 9px; font-size: 10px; }
-.em-call-status.received { color: #078b67; background: #e2f7ee; }
-.em-call-status.declined { color: #c45151; background: #fff0f0; }
-.em-call-status.missed { color: #d66a21; background: #fff2e7; }
-.em-call-history-empty { min-height: 190px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: #8ba0af; }
-.em-call-history-empty b { color: #38596c; font-size: 12px; }
-.em-call-history-empty span, .em-call-history-note { color: #8ba0af; font-size: 11px; }
-.em-call-history-note { margin: 12px 2px; }
+
+.em-call-history-row:hover .em-call-history-icon {
+  transform: scale(1.08);
+}
+
+.em-call-history-icon.missed {
+  background: #fff0e8;
+  color: #ed6a25;
+}
+
+.em-call-history-icon.declined {
+  background: #fff0f0;
+  color: #d85c5c;
+}
+
+.em-call-type,
+.em-call-duration {
+  color: #617c8e;
+  font-size: 11px;
+}
+
+/* Status badges */
+
+.em-call-status {
+  width: max-content;
+  border-radius: 20px;
+  padding: 6px 9px;
+  font-size: 10px;
+  transition: transform .2s ease;
+}
+
+.em-call-history-row:hover .em-call-status {
+  transform: translateY(-1px);
+}
+
+.em-call-status.received {
+  color: #078b67;
+  background: #e2f7ee;
+}
+
+.em-call-status.declined {
+  color: #c45151;
+  background: #fff0f0;
+}
+
+.em-call-status.missed {
+  color: #d66a21;
+  background: #fff2e7;
+}
+
+/* Copy action */
+
+.em-call-copy {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #91a5b2;
+  opacity: 0;
+  cursor: pointer;
+  transition: opacity .2s, color .2s, background .2s,
+    transform .2s;
+}
+
+.em-call-history-row:hover .em-call-copy,
+.em-call-copy:focus-visible {
+  opacity: 1;
+}
+
+.em-call-copy:hover {
+  color: #078f87;
+  background: #e3f5f2;
+  transform: scale(1.08);
+}
+
+.em-call-copy:focus-visible {
+  outline: 2px solid #078f87;
+  outline-offset: 2px;
+}
+
+/* Empty state */
+
+.em-call-history-empty {
+  min-height: 210px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  color: #8ba0af;
+}
+
+.em-call-history-empty b {
+  color: #38596c;
+  font-size: 13px;
+}
+
+.em-call-history-empty span {
+  font-size: 11px;
+}
+
+.em-call-history-empty button {
+  margin-top: 5px;
+  border: 0;
+  background: #e3f5f2;
+  color: #078f87;
+  border-radius: 8px;
+  padding: 8px 13px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background .2s, transform .2s;
+}
+
+.em-call-history-empty button:hover {
+  background: #d4efeb;
+  transform: translateY(-2px);
+}
+
+.em-call-history-note {
+  margin: 12px 2px;
+  color: #8ba0af;
+  font-size: 11px;
+}
+
+/* =========================================
+   SKELETON LOADING
+========================================= */
+
+.em-call-skeleton-list {
+  overflow: hidden;
+}
+
+.em-call-skeleton-row {
+  min-height: 76px;
+  display: grid;
+  grid-template-columns:
+    minmax(180px, 1.5fr)
+    minmax(85px, .7fr)
+    minmax(115px, .9fr)
+    minmax(90px, .7fr)
+    minmax(80px, .6fr);
+  align-items: center;
+  gap: 14px;
+  padding: 13px 20px;
+  border-top: 1px solid #eff3f5;
+}
+
+.em-skeleton {
+  display: block;
+  position: relative;
+  overflow: hidden;
+  background: #edf3f5;
+  border-radius: 6px;
+}
+
+.em-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, .8),
+    transparent
+  );
+  animation: emShimmer 1.4s infinite;
+}
+
+.em-skeleton-person {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.em-skeleton-person > div {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.em-skeleton-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+}
+
+.em-skeleton-name {
+  width: 95px;
+  height: 10px;
+}
+
+.em-skeleton-subtitle {
+  width: 120px;
+  height: 8px;
+}
+
+.em-skeleton-text {
+  width: 65px;
+  height: 10px;
+}
+
+.em-skeleton-badge {
+  width: 60px;
+  height: 23px;
+  border-radius: 20px;
+}
+
+/* =========================================
+   ANIMATIONS
+========================================= */
+
+@keyframes emFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes emRowEnter {
+  from {
+    opacity: 0;
+    transform: translateY(7px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes emShimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* =========================================
+   RESPONSIVE
+========================================= */
+
+@media (max-width: 1100px) {
+  .em-call-history-heading,
+  .em-call-history-row {
+    grid-template-columns:
+      minmax(145px, 1.4fr)
+      minmax(70px, .7fr)
+      minmax(100px, .9fr)
+      minmax(80px, .7fr)
+      minmax(65px, .6fr)
+      25px;
+    gap: 9px;
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+}
+
 @media (max-width: 900px) {
-  .em-call-history-toolbar { align-items: stretch; flex-direction: column; }
-  .em-call-history-search { width: 100%; }
-  .em-call-history-heading { display: none; }
-  .em-call-history-row { grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
-  .em-call-history-row > :nth-child(2), .em-call-history-row > :nth-child(5) { display: none; }
-  .em-call-history-time { grid-column: 1; padding-left: 49px; }
-  .em-call-status { grid-column: 2; grid-row: 1 / span 2; }
+  .em-call-history-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .em-call-history-search {
+    width: 100%;
+  }
+
+  .em-call-history-heading {
+    display: none;
+  }
+
+  .em-call-history-row {
+    grid-template-columns: minmax(0, 1fr) auto 30px;
+    gap: 10px;
+  }
+
+  .em-call-history-row > :nth-child(2),
+  .em-call-history-row > :nth-child(5) {
+    display: none;
+  }
+
+  .em-call-history-time {
+    grid-column: 1;
+    padding-left: 49px;
+  }
+
+  .em-call-status {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+
+  .em-call-copy {
+    grid-column: 3;
+    grid-row: 1 / span 2;
+    opacity: 1;
+  }
+
+  .em-call-skeleton-row {
+    grid-template-columns: 1fr auto;
+  }
+
+  .em-call-skeleton-row > :nth-child(n+2) {
+    display: none;
+  }
 }
+
+@media (max-width: 480px) {
+  .em-call-history-toolbar {
+    padding: 14px;
+  }
+
+  .em-call-history-row {
+    padding: 13px 12px;
+  }
+
+  .em-call-history-icon {
+    width: 34px;
+    height: 34px;
+    flex-basis: 34px;
+  }
+
+  .em-call-history-person {
+    gap: 8px;
+  }
+
+  .em-call-status {
+    font-size: 9px;
+    padding: 5px 7px;
+  }
+}
+
+/* =========================================
+   REDUCED MOTION
+========================================= */
+
 @media (prefers-reduced-motion: reduce) {
-  .em-call-history-row, .em-home-schedule { animation: none; }
-  .em-call-history-row, .em-home-schedule .em-schedule-item { transition: none; }
+  .em-calls-page,
+  .em-call-history-row,
+  .em-home-schedule,
+  .em-skeleton::after {
+    animation: none !important;
+  }
+
+  .em-call-history-row,
+  .em-call-history-icon,
+  .em-call-status,
+  .em-call-copy,
+  .em-home-schedule .em-schedule-item {
+    transition: none !important;
+  }
 }

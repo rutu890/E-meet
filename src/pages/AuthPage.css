@@ -1137,3 +1137,33 @@ position: absolute;
 .auth-terms-checkbox {
   flex: 0 0 22px;
 }
+.auth-page .auth-guest-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 43px;
+  margin-top: 12px;
+  border: 1px dashed var(--auth-border);
+  border-radius: 8px;
+  background: transparent !important;
+  color: #164e5c !important;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: border-color .2s ease, background .2s ease, color .2s ease, transform .2s ease;
+}
+
+.auth-page .auth-guest-button:hover:not(:disabled) {
+  border-color: #0f9d93;
+  border-style: solid;
+  background: #eef9f8 !important;
+  color: #0b4f5c !important;
+  transform: translateY(-1px);
+}
+
+.auth-page .auth-guest-button:disabled {
+  opacity: .72;
+  cursor: not-allowed;
+}

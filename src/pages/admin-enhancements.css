@@ -1,0 +1,137 @@
+
+.ad-header-actions { display: flex; align-items: center; gap: 10px; }
+.ad-signout { display: inline-flex; align-items: center; gap: 6px; }
+
+/* ---------------- hover + press feedback ---------------- */
+.ad-stat-card,
+.ad-insight-card,
+.ad-panel {
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+.ad-stat-card:hover,
+.ad-insight-card:hover { transform: translateY(-3px); box-shadow: 0 12px 28px #183d4d14; }
+
+.ad-stat-icon { transition: transform .25s ease; }
+.ad-stat-card:hover .ad-stat-icon { transform: scale(1.1) rotate(-4deg); }
+
+.ad-export, .ad-back, .ad-primary-button, .ad-details-button, .ad-attendee-link, .ad-tabs button,
+.ad-close, .ad-brand {
+  transition: transform .15s ease, background .18s ease, color .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+.ad-export:hover, .ad-primary-button:hover { transform: translateY(-1px); box-shadow: 0 8px 18px #0b686d26; }
+.ad-export:active, .ad-back:active, .ad-primary-button:active,
+.ad-details-button:active, .ad-attendee-link:active, .ad-tabs button:active { transform: scale(.97); }
+.ad-back:hover, .ad-details-button:hover, .ad-attendee-link:hover { transform: translateY(-1px); }
+.ad-close:hover { transform: rotate(90deg); }
+.ad-brand:hover .ad-logo { transform: translateY(-2px); }
+.ad-logo { transition: transform .22s ease; }
+
+.ad-table tbody tr { transition: background .15s ease; }
+.ad-table tbody tr:hover { background: #f4fafa; }
+.ad-meeting-icon { transition: transform .2s ease; }
+.ad-table tbody tr:hover .ad-meeting-icon { transform: scale(1.08); }
+
+.ad-search, .ad-filter { transition: border-color .18s ease, box-shadow .18s ease; }
+.ad-search:focus-within, .ad-filter:focus-within { box-shadow: 0 0 0 3px #0fb9ae22; }
+.ad-search-clear { display: grid; place-items: center; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 50%; background: #e8f0f3; color: #587789; cursor: pointer; transition: background .15s ease; }
+.ad-search-clear:hover { background: #d6e4ea; }
+
+.ad-activity-item { transition: background .15s ease, transform .15s ease; }
+.ad-activity-item:hover { background: #f4fafa; transform: translateX(2px); }
+
+.ad-copy-id { display: inline-grid; place-items: center; width: 24px; height: 24px; margin-left: 8px; padding: 0; vertical-align: middle; border: 0; border-radius: 6px; background: #eef5f7; color: #4c6d7f; cursor: pointer; transition: background .15s ease, color .15s ease, transform .12s ease; }
+.ad-copy-id:hover { background: #e0f5f2; color: #0b686d; }
+.ad-copy-id:active { transform: scale(.9); }
+
+.ad-page :focus-visible { outline: 2px solid #f06422; outline-offset: 2px; }
+
+/* ---------------- charts grow in (once, on load) ---------------- */
+.ad-bar-fill {
+  transform-origin: bottom;
+  animation: adGrowY .7s cubic-bezier(.2,.8,.2,1) both;
+  animation-delay: calc(var(--i, 0) * 60ms + 120ms);
+}
+.ad-bar-value, .ad-bar-label { animation: adFade .4s ease both; animation-delay: calc(var(--i, 0) * 60ms + 300ms); }
+.ad-bar-column:hover .ad-bar-fill { filter: brightness(1.08); }
+.ad-status-fill {
+  transform-origin: left;
+  transition: width .5s cubic-bezier(.2,.8,.2,1);
+  animation: adGrowX .7s cubic-bezier(.2,.8,.2,1) both;
+  animation-delay: calc(var(--i, 0) * 80ms + 150ms);
+}
+
+/* ---------------- tab / row / modal motion ---------------- */
+.ad-tab-body { animation: adFade .25s ease both; }
+.ad-row, .ad-activity-item {
+  animation: adRowIn .3s ease both;
+  animation-delay: calc(var(--i, 0) * 30ms);
+}
+.ad-overlay { animation: adFade .2s ease both; }
+.ad-detail-modal { animation: adModalIn .28s cubic-bezier(.2,.8,.2,1) both; }
+
+/* ---------------- toast ---------------- */
+.ad-toast {
+  animation: adToastIn .3s cubic-bezier(.2,.8,.3,1) both, adToastOut .3s ease 2.5s forwards;
+}
+.ad-toast > svg:first-child { flex-shrink: 0; }
+.ad-toast--info { border-left: 4px solid #f06422; }
+.ad-toast--error { border-left: 4px solid #dc4545; }
+.ad-toast--error > svg:first-child { color: #dc4545; }
+
+/* ---------------- skeleton shimmer ---------------- */
+.ad-skeleton-title, .ad-skeleton-stat, .ad-skeleton-chart, .ad-skeleton-table > div {
+  position: relative;
+  overflow: hidden;
+}
+.ad-skeleton-title::after, .ad-skeleton-stat::after, .ad-skeleton-chart::after, .ad-skeleton-table > div::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 20%, #ffffffa6 50%, transparent 80%);
+  transform: translateX(-100%);
+  animation: adShimmer 1.4s ease-in-out infinite;
+}
+
+/* ---------------- admin login ---------------- */
+.em-admin-login-card.is-shake { animation: emAdminShake .4s ease; }
+.em-admin-login-icon { transition: background .3s ease, color .3s ease; }
+.em-admin-login-icon.is-success { background: #d9f5ec; color: #0a8f66; animation: emAdminPop .4s cubic-bezier(.2,.9,.3,1.3) both; }
+.em-admin-submit.is-success { background: #0a8f66; opacity: 1 !important; cursor: default; }
+.em-admin-submit.is-success:hover { background: #0a8f66; transform: none; box-shadow: none; }
+.em-admin-input-wrap input:disabled { cursor: not-allowed; }
+.em-admin-demo-hint { margin: 16px 0 0; padding: 10px 12px; border-radius: 9px; background: #eef9f8; color: #4c6d7f; font-size: 12px; line-height: 1.6; text-align: center; }
+.em-admin-demo-hint b { color: #0b686d; font-weight: 650; }
+.em-admin-toast { position: fixed; z-index: 1000; top: 20px; right: 20px; display: flex; align-items: center; gap: 10px; max-width: min(400px, calc(100vw - 32px)); padding: 12px 12px 12px 14px; border: 1px solid #dce9ed; border-left: 4px solid #0fb9ae; border-radius: 10px; background: #fff; box-shadow: 0 12px 35px #11374626; color: #315365; font-size: 13px; animation: adToastIn .3s cubic-bezier(.2,.8,.3,1) both; }
+.em-admin-toast > span { display: grid; place-items: center; width: 22px; height: 22px; flex-shrink: 0; border-radius: 50%; background: #d5f1ee; color: #0a9a90; animation: emAdminPop .35s cubic-bezier(.2,.9,.3,1.3) both; }
+.em-admin-toast button { display: grid; place-items: center; width: 24px; height: 24px; border: 0; border-radius: 6px; background: transparent; color: #6b8796; cursor: pointer; }
+.em-admin-toast button:hover { background: #f0f5f7; }
+.em-admin-brand:hover .em-admin-brand-mark { transform: translateY(-2px); }
+.em-admin-brand-mark { transition: transform .22s ease; }
+
+/* ---------------- keyframes ---------------- */
+@keyframes adFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes adGrowY { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes adGrowX { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes adRowIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes adModalIn { from { opacity: 0; transform: translateY(12px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes adToastIn { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes adToastOut { to { opacity: 0; transform: translateX(16px); } }
+@keyframes adShimmer { to { transform: translateX(100%); } }
+@keyframes emAdminShake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-6px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(4px); } }
+@keyframes emAdminPop { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+@media (max-width: 700px) {
+  .ad-header-actions { gap: 6px; }
+  .ad-toast, .em-admin-toast { right: 12px; top: 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ad-page *, .ad-page *::before, .ad-page *::after,
+  .em-admin-login *, .em-admin-login *::before, .em-admin-login *::after,
+  .ad-skeleton-page *, .ad-skeleton-page *::after {
+    animation-duration: .01ms !important;
+    animation-delay: 0s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}

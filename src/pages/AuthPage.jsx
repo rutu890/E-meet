@@ -56,8 +56,7 @@ function getInitialErrors(values, isSignup) {
 export default function AuthPage({ mode = "login" }) {
   const isSignup = mode === "signup";
   const navigate = useNavigate();
-  const { login, signup: register } = useApp();
-
+  const { login, signup: register, guestLogin } = useApp();
   const [values, setValues] = useState({
     name: "", email: "", password: "", confirmPassword: "", termsAccepted: false,
   });
@@ -149,6 +148,18 @@ export default function AuthPage({ mode = "login" }) {
     );
   }
 
+  async function handleGuestLogin() {
+    setLoading(true);
+    try {
+      await guestLogin(values.name);
+      notify("Joined as guest!", "success");
+      navigate("/", { replace: true });
+    } catch (error) {
+      notify(error?.message || "Could not continue as guest.", "error");
+    } finally {
+      setLoading(false);
+    }
+  }
   function handleForgotPassword(event) {
     event.preventDefault();
     if (!emailPattern.test(resetEmail.trim())) {
@@ -204,7 +215,6 @@ export default function AuthPage({ mode = "login" }) {
           </Link>
 
           <div className="auth-aside-content">
-            <p className="auth-eyebrow">YOUR TEAM. ONE SPACE.</p>
             <h1>
               Welcome to
               <br />
@@ -243,7 +253,6 @@ export default function AuthPage({ mode = "login" }) {
             <span />
           </div>
 
-          <p className="auth-aside-footer">Better conversations start here.</p>
         </aside>
 
         <main className="auth-main">
@@ -458,7 +467,15 @@ export default function AuthPage({ mode = "login" }) {
               Continue with Google
             </button>
 
-
+            <button
+              type="button"
+              className="auth-guest-button"
+              onClick={handleGuestLogin}
+              disabled={loading}
+            >
+              <UserRound size={19} aria-hidden="true" />
+              Continue as guest
+            </button>
 
             <p className="auth-switch">
               {isSignup ? "Already have an account?" : "Don't have an account?"}{" "}
@@ -467,7 +484,6 @@ export default function AuthPage({ mode = "login" }) {
               </Link>
             </p>
 
-            <p className="auth-legal">Euodoo Meet · Connect and collaborate</p>
           </section>
         </main>
       </div>

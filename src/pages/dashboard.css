@@ -4963,3 +4963,78 @@ select.em-text-input {
   background: #cbd5e1;
   border-radius: 999px;
 }
+
+.em-schedule-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 0;
+}
+
+.em-schedule-skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  min-height: 60px;
+}
+
+.em-schedule-skeleton-row > div {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.em-skeleton {
+  display: block;
+  position: relative;
+  overflow: hidden;
+  background: #edf1f3;
+  border-radius: 6px;
+}
+
+.em-schedule-skeleton-icon {
+  width: 36px;
+  height: 36px;
+}
+
+.em-schedule-skeleton-title {
+  width: 125px;
+  height: 11px;
+}
+
+.em-schedule-skeleton-info {
+  width: 175px;
+  height: 9px;
+}
+
+.em-schedule-skeleton-time {
+  width: 55px;
+  height: 10px;
+}
+
+.em-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255,255,255,.8),
+    transparent
+  );
+  transform: translateX(-100%);
+  animation: emShimmer 1.4s infinite;
+}
+
+@keyframes emShimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .em-skeleton::after {
+    animation: none;
+  }
+}

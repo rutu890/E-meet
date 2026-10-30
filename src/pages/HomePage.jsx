@@ -15,7 +15,6 @@ import {
 import { useNavigate } from "react-router-dom";
 import DashboardLayout from "../components/DashboardLayout";
 import Toast from "../components/Toast";
-import { HomeSkeleton } from "../components/Skeletons";
 import { demoMeetings } from "../data/demoData";
 import { meetingService } from "../services/meetingService";
 import { useApp } from "../context/AppContext";
@@ -182,6 +181,26 @@ const CallRow = memo(function CallRow({ meeting, index, onOpen }) {
     </article>
   );
 });
+
+
+function ScheduleSkeleton() {
+  return (
+    <div className="em-schedule-skeleton" aria-label="Loading schedule">
+      {[1, 2, 3].map((item) => (
+        <div className="em-schedule-skeleton-row" key={item}>
+          <span className="em-skeleton em-schedule-skeleton-icon" />
+
+          <div>
+            <span className="em-skeleton em-schedule-skeleton-title" />
+            <span className="em-skeleton em-schedule-skeleton-info" />
+          </div>
+
+          <span className="em-skeleton em-schedule-skeleton-time" />
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -463,10 +482,7 @@ export default function HomePage() {
 
   return (
     <DashboardLayout page="home" onSearch={setSearch}>
-      {loading ? (
-        <HomeSkeleton />
-      ) : (
-        <div className="em-dashboard-grid">
+      <div className="em-dashboard-grid">
           <section className="em-primary-column">
             <div className="em-welcome">
               <h1>
@@ -530,10 +546,15 @@ export default function HomePage() {
                 </div>
                 <span>{dayItems.length} meeting{dayItems.length === 1 ? "" : "s"}</span>
               </div>
-              {dayItems.length > 0 ? (
+              {loading ? (
+                <ScheduleSkeleton />
+              ) : dayItems.length > 0 ? (
                 <div className="em-schedule-list">
                   {dayItems.map((item) => (
-                    <div className={`em-schedule-item ${item.color || "teal"}`} key={item.id}>
+                    <div
+                      className={`em-schedule-item ${item.color || "teal"}`}
+                      key={item.id}
+                    >
                       <div>
                         <b>{item.title}</b>
                         <small>{item.range || item.time || "Time not set"}</small>
@@ -544,7 +565,8 @@ export default function HomePage() {
                 </div>
               ) : (
                 <div className="em-schedule-empty">
-                  ...
+                  <CalendarDays size={22} />
+                  <p>No meetings scheduled for this day.</p>
                 </div>
               )}
             </section>
@@ -629,7 +651,6 @@ export default function HomePage() {
 
           </aside>
         </div>
-      )}
 
       {showCreate && (
         <div
