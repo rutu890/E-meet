@@ -13,8 +13,8 @@ import {
   X,
 } from "lucide-react";
 import { adminAuthService } from "../services/adminAuthService";
-import { playTone } 
- from "../utils/Tones";
+import { playTone } from "../utils/tones";
+
 import "./AdminLoginPage.css";
 import "./admin-enhancements.css";
 
