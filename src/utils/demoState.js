@@ -57,7 +57,6 @@ export function getProfile(user) {
   const key = getProfileKey(u);
   let saved = read(key, null);
 
-  // If this user has no scoped profile yet, check if legacy PROFILE_KEY belongs to them
   if (!saved && email) {
     const legacy = read(PROFILE_KEY, null);
     if (legacy?.email?.trim().toLowerCase() === email) {

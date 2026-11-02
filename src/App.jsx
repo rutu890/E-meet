@@ -2,7 +2,7 @@ import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { Toaster } from "sonner";
 import { useApp } from "./context/AppContext";
-import { adminAuthService } from "./services/adminAuthService"; // <-- was missing
+import { adminAuthService } from "./services/adminAuthService"; 
 import "./pages/dashboard.css";
 
 const AuthPage = lazy(() => import("./pages/AuthPage"));
